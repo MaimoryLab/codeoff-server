@@ -14,6 +14,9 @@ import * as devices$0 from "./internal/devices/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as diagnostics$0 from "./internal/diagnostics/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as tunnel$0 from "./internal/tunnel/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -55,6 +58,10 @@ export function RevokeDevice(id: string): $CancellablePromise<void> {
     return $Call.ByID(2660330386, id);
 }
 
+export function SetControlURL(url: string): $CancellablePromise<void> {
+    return $Call.ByID(4106560776, url);
+}
+
 export function Shutdown(): $CancellablePromise<void> {
     return $Call.ByID(780008012);
 }
@@ -63,10 +70,22 @@ export function StartAppServer(): $CancellablePromise<appserver$0.State> {
     return $Call.ByID(2628644086);
 }
 
+export function StartTunnel(): $CancellablePromise<tunnel$0.State> {
+    return $Call.ByID(2597161884);
+}
+
 export function Status(): $CancellablePromise<diagnostics$0.Snapshot> {
     return $Call.ByID(838280468);
 }
 
 export function StopAppServer(): $CancellablePromise<appserver$0.State> {
     return $Call.ByID(4014769974);
+}
+
+export function StopTunnel(): $CancellablePromise<tunnel$0.State> {
+    return $Call.ByID(4271753948);
+}
+
+export function TunnelState(): $CancellablePromise<tunnel$0.State> {
+    return $Call.ByID(1938411353);
 }

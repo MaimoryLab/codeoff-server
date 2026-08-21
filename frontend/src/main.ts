@@ -10,10 +10,17 @@ const installCodexButton = document.querySelector<HTMLButtonElement>("#install-c
 const appServerState = document.querySelector<HTMLElement>("#app-server-state")!;
 const appServerDetail = document.querySelector<HTMLElement>("#app-server-detail")!;
 const toggleAppServerButton = document.querySelector<HTMLButtonElement>("#toggle-app-server")!;
+const tunnelState = document.querySelector<HTMLElement>("#tunnel-state")!;
+const tunnelDetail = document.querySelector<HTMLElement>("#tunnel-detail")!;
+const toggleTunnelButton = document.querySelector<HTMLButtonElement>("#toggle-tunnel")!;
 const bindDeviceButton = document.querySelector<HTMLButtonElement>("#bind-device")!;
 const pairingCode = document.querySelector<HTMLElement>("#pairing-code")!;
 const deviceList = document.querySelector<HTMLUListElement>("#device-list")!;
 let appServerRunning = false;
+let tunnelRunning = false;
+let tunnelURL = "";
+let pairingToken = "";
+let pairingExpiresAt = "";
 
 type RuntimeState = {
     running: boolean;
@@ -23,6 +30,8 @@ type RuntimeState = {
     userAgent?: string;
     error?: string;
 };
+
+type TunnelState = { running: boolean; starting: boolean; url?: string; error?: string };
 
 type Device = { id: string; name: string; createdAt: string; lastSeen: string };
 
@@ -61,17 +70,50 @@ function renderAppServer(state: RuntimeState) {
     toggleAppServerButton.disabled = state.starting;
 }
 
+function renderTunnel(state: TunnelState) {
+    tunnelRunning = state.running;
+    tunnelURL = state.url || "";
+    tunnelState.textContent = state.starting ? "Starting" : state.running ? "Online" : "Offline";
+    tunnelState.className = state.running ? "state-online" : "state-offline";
+    tunnelDetail.textContent = state.error || state.url || "Stopped";
+    toggleTunnelButton.textContent = state.running ? "Stop" : "Start";
+    toggleTunnelButton.disabled = state.starting;
+    updatePairingCode();
+}
+
+function updatePairingCode() {
+    if (!pairingToken) {
+        return;
+    }
+    const endpoint = tunnelURL ? ` · endpoint ${tunnelURL}/api/v1/pair/exchange` : "";
+    pairingCode.textContent = `Pairing code: ${pairingToken}${endpoint} · expires ${pairingExpiresAt}`;
+}
+
 async function refresh() {
     refreshButton.disabled = true;
     message.textContent = "Checking local environment...";
     try {
-        const [environment, runtime] = await Promise.all([AppService.RefreshStatus(), AppService.AppServerState()]);
+        const [environment, runtime, tunnel] = await Promise.all([AppService.RefreshStatus(), AppService.AppServerState(), AppService.TunnelState()]);
         render(environment);
         renderAppServer(runtime);
+        renderTunnel(tunnel);
     } catch (error) {
         message.textContent = error instanceof Error ? error.message : "Unable to check environment";
     } finally {
         refreshButton.disabled = false;
+    }
+}
+
+async function toggleTunnel() {
+    toggleTunnelButton.disabled = true;
+    message.textContent = tunnelRunning ? "Stopping tunnel..." : "Starting tunnel...";
+    try {
+        const state = tunnelRunning ? await AppService.StopTunnel() : await AppService.StartTunnel();
+        renderTunnel(state);
+        message.textContent = state.running ? "Tunnel is online" : "Tunnel stopped";
+    } catch (error) {
+        message.textContent = error instanceof Error ? error.message : "Unable to change tunnel state";
+        renderTunnel(await AppService.TunnelState());
     }
 }
 
@@ -122,8 +164,10 @@ async function bindDevice() {
     bindDeviceButton.disabled = true;
     try {
         const pairing = await AppService.NewPairing();
+        pairingToken = pairing.token;
+        pairingExpiresAt = new Date(pairing.expiresAt).toLocaleTimeString();
         pairingCode.hidden = false;
-        pairingCode.textContent = `Pairing code: ${pairing.token} · expires ${new Date(pairing.expiresAt).toLocaleTimeString()}`;
+        updatePairingCode();
     } catch (error) {
         message.textContent = error instanceof Error ? error.message : "Unable to create pairing code";
     } finally {
@@ -156,7 +200,8 @@ refreshButton.addEventListener("click", refresh);
 installNodeButton.addEventListener("click", () => void install("node"));
 installCodexButton.addEventListener("click", () => void install("codex"));
 toggleAppServerButton.addEventListener("click", () => void toggleAppServer());
+toggleTunnelButton.addEventListener("click", () => void toggleTunnel());
 bindDeviceButton.addEventListener("click", () => void bindDevice());
 void refresh();
 void refreshDevices();
-window.setInterval(() => void AppService.AppServerState().then(renderAppServer).catch(() => undefined), 5000);
+window.setInterval(() => void Promise.all([AppService.AppServerState(), AppService.TunnelState()]).then(([runtime, tunnel]) => { renderAppServer(runtime); renderTunnel(tunnel); }).catch(() => undefined), 5000);

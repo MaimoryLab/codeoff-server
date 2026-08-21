@@ -7,8 +7,12 @@ import * as appserver$0 from "./internal/appserver/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as diagnostics$0 from "./internal/diagnostics/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as tunnel$0 from "./internal/tunnel/models.js";
 
 export interface Overview {
     "environment": diagnostics$0.Snapshot;
     "appServer": appserver$0.State;
+    "tunnel": tunnel$0.State;
 }
