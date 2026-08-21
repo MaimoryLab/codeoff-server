@@ -28,10 +28,13 @@ func (i *Installer) InstallNode(ctx context.Context) error {
 		if _, err := exec.LookPath("apt-get"); err != nil {
 			return errors.New("automatic Node.js installation requires Homebrew, winget, or apt-get")
 		}
-		if err := i.run(ctx, "sudo", "apt-get", "update"); err != nil {
+		if _, err := exec.LookPath("pkexec"); err != nil {
+			return errors.New("automatic Node.js installation requires PolicyKit (pkexec)")
+		}
+		if err := i.run(ctx, "pkexec", "apt-get", "update"); err != nil {
 			return err
 		}
-		return i.run(ctx, "sudo", "apt-get", "install", "-y", "nodejs", "npm")
+		return i.run(ctx, "pkexec", "apt-get", "install", "-y", "nodejs", "npm")
 	default:
 		return fmt.Errorf("automatic Node.js installation is unsupported on %s", runtime.GOOS)
 	}
