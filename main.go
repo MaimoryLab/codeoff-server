@@ -63,6 +63,13 @@ func main() {
 		service.RefreshStatus()
 		app.Event.Emit("status:changed", service.Status())
 	})
+	menu.Add("Update Codex").OnClick(func(*application.Context) {
+		go func() {
+			if _, err := service.InstallCodex(); err != nil {
+				log.Printf("update Codex: %v", err)
+			}
+		}()
+	})
 	menu.AddSeparator()
 	menu.Add("Quit").OnClick(func(*application.Context) { app.Quit() })
 

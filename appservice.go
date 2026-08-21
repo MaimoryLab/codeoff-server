@@ -10,9 +10,10 @@ import (
 )
 
 type AppService struct {
-	mu       sync.RWMutex
-	status   diagnostics.Snapshot
-	progress string
+	mu        sync.RWMutex
+	installMu sync.Mutex
+	status    diagnostics.Snapshot
+	progress  string
 }
 
 func NewAppService() *AppService {
@@ -36,6 +37,8 @@ func (s *AppService) RefreshStatus() diagnostics.Snapshot {
 }
 
 func (s *AppService) InstallNode() (diagnostics.Snapshot, error) {
+	s.installMu.Lock()
+	defer s.installMu.Unlock()
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
 	if err := installer.New(s.setProgress).InstallNode(ctx); err != nil {
@@ -45,6 +48,8 @@ func (s *AppService) InstallNode() (diagnostics.Snapshot, error) {
 }
 
 func (s *AppService) InstallCodex() (diagnostics.Snapshot, error) {
+	s.installMu.Lock()
+	defer s.installMu.Unlock()
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
 	if err := installer.New(s.setProgress).InstallCodex(ctx); err != nil {
