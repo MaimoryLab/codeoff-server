@@ -9,6 +9,18 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 // @ts-ignore: Unused imports
 import * as diagnostics$0 from "./internal/diagnostics/models.js";
 
+export function InstallCodex(): $CancellablePromise<diagnostics$0.Snapshot> {
+    return $Call.ByID(2252125960);
+}
+
+export function InstallNode(): $CancellablePromise<diagnostics$0.Snapshot> {
+    return $Call.ByID(2048349969);
+}
+
+export function InstallProgress(): $CancellablePromise<string> {
+    return $Call.ByID(962318050);
+}
+
 export function RefreshStatus(): $CancellablePromise<diagnostics$0.Snapshot> {
     return $Call.ByID(1963326979);
 }
