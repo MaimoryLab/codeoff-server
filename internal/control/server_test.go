@@ -18,9 +18,12 @@ import (
 type fakeApprovalServer struct {
 	id     int64
 	result any
+	method string
+	params any
 }
 
-func (s *fakeApprovalServer) Call(context.Context, string, any) (json.RawMessage, error) {
+func (s *fakeApprovalServer) Call(_ context.Context, method string, params any) (json.RawMessage, error) {
+	s.method, s.params = method, params
 	return json.RawMessage(`{}`), nil
 }
 
@@ -130,5 +133,52 @@ func TestApprovalResponseRequiresAuthAndForwardsDecision(t *testing.T) {
 	result, ok := fake.result.(map[string]json.RawMessage)
 	if !ok || string(result["decision"]) != `"accept"` {
 		t.Fatalf("approval result = %#v", fake.result)
+	}
+}
+
+func TestResumeThreadForwardsThreadID(t *testing.T) {
+	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pairing, err := store.NewPairing()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fake := new(fakeApprovalServer)
+	server := New(func(context.Context) diagnostics.Snapshot { return diagnostics.Snapshot{} }, store, fake)
+	httpServer := httptest.NewServer(server.httpServer.Handler)
+	t.Cleanup(httpServer.Close)
+
+	pairBody, _ := json.Marshal(map[string]string{"token": pairing.Token, "name": "Phone"})
+	pairResponse, err := http.Post(httpServer.URL+"/api/v1/pair/exchange", "application/json", bytes.NewReader(pairBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pairResponse.Body.Close()
+	var exchange struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(pairResponse.Body).Decode(&exchange); err != nil {
+		t.Fatal(err)
+	}
+
+	request, _ := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/threads/thread-42/resume", bytes.NewReader([]byte(`{}`)))
+	request.Header.Set("Authorization", "Bearer "+exchange.Token)
+	request.Header.Set("Content-Type", "application/json")
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("resume status = %d", response.StatusCode)
+	}
+	if fake.method != "thread/resume" {
+		t.Fatalf("method = %q", fake.method)
+	}
+	params, ok := fake.params.(map[string]string)
+	if !ok || params["threadId"] != "thread-42" {
+		t.Fatalf("params = %#v", fake.params)
 	}
 }
