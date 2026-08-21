@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Codex Remote</title>
+    <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<main class="shell">
+    <header class="topbar">
+        <div><p class="eyebrow">LOCAL CONTROL</p><h1>Codex Remote</h1></div>
+        <button id="refresh" class="button" type="button">Refresh</button>
+    </header>
+    <section class="hero" aria-labelledby="status-title">
+        <div><p class="eyebrow">DESKTOP SERVICE</p><h2 id="status-title">Environment status</h2><p id="message" class="muted">Checking local environment...</p></div>
+        <div class="meta"><strong id="platform">-</strong><span id="checked-at">-</span></div>
+    </section>
+    <section class="tool-grid" aria-label="Local tools">
+        <article class="tool-card"><span>Node.js</span><strong id="tool-node" class="tool-status">Checking</strong></article>
+        <article class="tool-card"><span>Codex CLI</span><strong id="tool-codex" class="tool-status">Checking</strong></article>
+        <article class="tool-card"><span>App server</span><strong id="tool-app-server" class="tool-status">Checking</strong></article>
+        <article class="tool-card"><span>Cloudflared</span><strong id="tool-cloudflared" class="tool-status">Checking</strong></article>
+    </section>
+    <section class="next-step"><p class="eyebrow">NEXT</p><h2>Connect a device</h2><p class="muted">Device pairing, session controls and Codex updates will appear here.</p><button class="button secondary" type="button" disabled>Bind new device</button></section>
+</main>
+</body>
+</html>

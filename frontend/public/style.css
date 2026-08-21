@@ -1,0 +1,27 @@
+:root { color: #e9edf2; background: #101218; font-family: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: #101218; }
+button { font: inherit; }
+.shell { width: min(920px, calc(100% - 48px)); margin: 0 auto; padding: 52px 0 72px; }
+.topbar, .hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; }
+.topbar { border-bottom: 1px solid #2a2f39; padding-bottom: 28px; }
+.eyebrow { margin: 0 0 10px; color: #7d8796; font-size: 11px; font-weight: 700; letter-spacing: .14em; }
+h1, h2, p { margin-top: 0; }
+h1 { margin-bottom: 0; font-size: 32px; letter-spacing: -.02em; }
+h2 { margin-bottom: 8px; font-size: 22px; }
+.button { border: 0; border-radius: 6px; background: #e9edf2; color: #101218; cursor: pointer; font-weight: 700; padding: 10px 16px; }
+.button:disabled { cursor: wait; opacity: .55; }
+.secondary { background: transparent; border: 1px solid #3a414e; color: #e9edf2; cursor: not-allowed; }
+.hero { margin: 46px 0 24px; }
+.muted, .meta span { color: #8d97a6; }
+.meta { display: grid; gap: 6px; text-align: right; font-size: 13px; }
+.meta strong { color: #d9dee6; font-size: 14px; }
+.tool-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tool-card, .next-step { border: 1px solid #2a2f39; background: #171a22; border-radius: 6px; }
+.tool-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px; }
+.tool-status { overflow: hidden; color: #8d97a6; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.tool-status.ready { color: #83d39b; }
+.tool-status.missing { color: #ef9a9a; }
+.next-step { margin-top: 36px; padding: 24px; }
+.next-step .button { margin-top: 8px; }
+@media (max-width: 640px) { .shell { width: min(100% - 32px, 920px); padding-top: 32px; } .topbar, .hero { gap: 18px; } .hero { display: block; margin-top: 32px; } .meta { margin-top: 18px; text-align: left; } .tool-grid { grid-template-columns: 1fr; } }
