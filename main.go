@@ -29,6 +29,7 @@ func main() {
 	if err := controlServer.Start(); err != nil {
 		log.Fatal(err)
 	}
+	service.SetControlURL(controlServer.Addr())
 	defer func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
@@ -70,6 +71,13 @@ func main() {
 		go func() {
 			if _, err := service.InstallCodex(); err != nil {
 				log.Printf("update Codex: %v", err)
+			}
+		}()
+	})
+	menu.Add("Start Tunnel").OnClick(func(*application.Context) {
+		go func() {
+			if _, err := service.StartTunnel(); err != nil {
+				log.Printf("start tunnel: %v", err)
 			}
 		}()
 	})

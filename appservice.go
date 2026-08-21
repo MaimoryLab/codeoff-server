@@ -10,20 +10,24 @@ import (
 	"github.com/MaimoryLab/codex-server/internal/devices"
 	"github.com/MaimoryLab/codex-server/internal/diagnostics"
 	"github.com/MaimoryLab/codex-server/internal/installer"
+	"github.com/MaimoryLab/codex-server/internal/tunnel"
 )
 
 type AppService struct {
-	mu        sync.RWMutex
-	installMu sync.Mutex
-	status    diagnostics.Snapshot
-	progress  string
-	appServer *appserver.Manager
-	devices   *devices.Store
+	mu         sync.RWMutex
+	installMu  sync.Mutex
+	status     diagnostics.Snapshot
+	progress   string
+	appServer  *appserver.Manager
+	devices    *devices.Store
+	tunnel     *tunnel.Manager
+	controlURL string
 }
 
 type Overview struct {
 	Environment diagnostics.Snapshot `json:"environment"`
 	AppServer   appserver.State      `json:"appServer"`
+	Tunnel      tunnel.State         `json:"tunnel"`
 }
 
 func NewAppService() (*AppService, error) {
@@ -35,7 +39,7 @@ func NewAppService() (*AppService, error) {
 	if err != nil {
 		return nil, err
 	}
-	service := &AppService{appServer: appserver.NewManager(), devices: deviceStore}
+	service := &AppService{appServer: appserver.NewManager(), devices: deviceStore, tunnel: tunnel.NewManager()}
 	service.RefreshStatus()
 	return service, nil
 }
@@ -47,7 +51,7 @@ func (s *AppService) Devices() []devices.Device { return s.devices.List() }
 func (s *AppService) RevokeDevice(id string) error { return s.devices.Revoke(id) }
 
 func (s *AppService) Overview() Overview {
-	return Overview{Environment: s.Status(), AppServer: s.appServer.State()}
+	return Overview{Environment: s.Status(), AppServer: s.appServer.State(), Tunnel: s.tunnel.State()}
 }
 
 func (s *AppService) AppServerState() appserver.State {
@@ -72,7 +76,31 @@ func (s *AppService) StopAppServer() (appserver.State, error) {
 }
 
 func (s *AppService) Shutdown() error {
+	if err := s.tunnel.Stop(); err != nil {
+		return err
+	}
 	return s.appServer.Stop()
+}
+
+func (s *AppService) SetControlURL(url string) { s.controlURL = url }
+
+func (s *AppService) TunnelState() tunnel.State { return s.tunnel.State() }
+
+func (s *AppService) StartTunnel() (tunnel.State, error) {
+	status := s.RefreshStatus()
+	if !status.Cloudflared.Installed {
+		return s.tunnel.State(), errors.New("cloudflared is not installed")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	defer cancel()
+	return s.tunnel.Start(ctx, status.Cloudflared.Path, s.controlURL)
+}
+
+func (s *AppService) StopTunnel() (tunnel.State, error) {
+	if err := s.tunnel.Stop(); err != nil {
+		return s.tunnel.State(), err
+	}
+	return s.tunnel.State(), nil
 }
 
 func (s *AppService) Status() diagnostics.Snapshot {
