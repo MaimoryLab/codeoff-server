@@ -67,6 +67,9 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 		}
 	})))
 	mux.Handle("GET /api/v1/threads", authenticate(deviceStore, callAppServer(appServer, "thread/list", func(*http.Request) any { return map[string]any{} })))
+	mux.Handle("GET /api/v1/threads/{threadID}", authenticate(deviceStore, callAppServer(appServer, "thread/read", func(r *http.Request) any {
+		return map[string]string{"threadId": r.PathValue("threadID")}
+	})))
 	mux.Handle("POST /api/v1/threads", authenticate(deviceStore, callAppServer(appServer, "thread/start", func(r *http.Request) any {
 		var request struct {
 			CWD string `json:"cwd"`
@@ -266,7 +269,7 @@ func writeJSON(w http.ResponseWriter, value any) {
 }
 
 func (s *Server) Start() error {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	listener, err := net.Listen("tcp4", "0.0.0.0:0")
 	if err != nil {
 		return err
 	}
@@ -281,7 +284,18 @@ func (s *Server) Addr() string {
 	if s.listener == nil {
 		return ""
 	}
-	return "http://" + s.listener.Addr().String()
+	_, port, err := net.SplitHostPort(s.listener.Addr().String())
+	if err != nil {
+		return ""
+	}
+	return "http://127.0.0.1:" + port
+}
+
+func (s *Server) ListenAddr() string {
+	if s.listener == nil {
+		return ""
+	}
+	return s.listener.Addr().String()
 }
 
 func (s *Server) Close(ctx context.Context) error {

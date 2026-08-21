@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -180,5 +181,27 @@ func TestResumeThreadForwardsThreadID(t *testing.T) {
 	params, ok := fake.params.(map[string]string)
 	if !ok || params["threadId"] != "thread-42" {
 		t.Fatalf("params = %#v", fake.params)
+	}
+}
+
+func TestStartBindsAllIPv4Interfaces(t *testing.T) {
+	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := New(func(context.Context) diagnostics.Snapshot { return diagnostics.Snapshot{} }, store)
+	if err := server.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = server.Close(context.Background()) })
+	host, _, err := net.SplitHostPort(server.ListenAddr())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if host != "0.0.0.0" {
+		t.Fatalf("listen host = %q", host)
+	}
+	if server.Addr() == "" {
+		t.Fatal("local control address is empty")
 	}
 }

@@ -35,7 +35,7 @@ func main() {
 		defer cancel()
 		_ = controlServer.Close(shutdownCtx)
 	}()
-	log.Printf("local control API: %s", controlServer.Addr())
+	log.Printf("control API listening on %s (LAN: use this machine's IP and port)", controlServer.ListenAddr())
 
 	app := application.New(application.Options{
 		Name:        "Codex Remote",
