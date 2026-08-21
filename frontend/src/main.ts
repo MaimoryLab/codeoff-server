@@ -100,6 +100,7 @@ async function refresh() {
         render(environment);
         renderAppServer(runtime);
         renderTunnel(tunnel);
+        await refreshDevices();
     } catch (error) {
         message.textContent = error instanceof Error ? error.message : "Unable to check environment";
     } finally {
@@ -210,4 +211,7 @@ toggleTunnelButton.addEventListener("click", () => void toggleTunnel());
 bindDeviceButton.addEventListener("click", () => void bindDevice());
 void refresh();
 void refreshDevices();
-window.setInterval(() => void Promise.all([AppService.AppServerState(), AppService.TunnelState()]).then(([runtime, tunnel]) => { renderAppServer(runtime); renderTunnel(tunnel); }).catch(() => undefined), 5000);
+window.setInterval(() => {
+    void Promise.all([AppService.AppServerState(), AppService.TunnelState()]).then(([runtime, tunnel]) => { renderAppServer(runtime); renderTunnel(tunnel); }).catch(() => undefined);
+    void refreshDevices();
+}, 5000);
