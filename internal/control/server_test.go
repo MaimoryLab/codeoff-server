@@ -184,6 +184,49 @@ func TestResumeThreadForwardsThreadID(t *testing.T) {
 	}
 }
 
+func TestReadThreadIncludesTurns(t *testing.T) {
+	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pairing, err := store.NewPairing()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fake := new(fakeApprovalServer)
+	server := New(func(context.Context) diagnostics.Snapshot { return diagnostics.Snapshot{} }, store, fake)
+	httpServer := httptest.NewServer(server.httpServer.Handler)
+	t.Cleanup(httpServer.Close)
+
+	pairBody, _ := json.Marshal(map[string]string{"token": pairing.Token, "name": "Phone"})
+	pairResponse, err := http.Post(httpServer.URL+"/api/v1/pair/exchange", "application/json", bytes.NewReader(pairBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pairResponse.Body.Close()
+	var exchange struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(pairResponse.Body).Decode(&exchange); err != nil {
+		t.Fatal(err)
+	}
+
+	request, _ := http.NewRequest(http.MethodGet, httpServer.URL+"/api/v1/threads/thread-42", nil)
+	request.Header.Set("Authorization", "Bearer "+exchange.Token)
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("read status = %d", response.StatusCode)
+	}
+	params, ok := fake.params.(map[string]any)
+	if !ok || params["threadId"] != "thread-42" || params["includeTurns"] != true {
+		t.Fatalf("params = %#v", fake.params)
+	}
+}
+
 func TestStartBindsAllIPv4Interfaces(t *testing.T) {
 	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
 	if err != nil {
