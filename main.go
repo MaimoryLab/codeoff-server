@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/MaimoryLab/codex-server/internal/control"
-	"github.com/MaimoryLab/codex-server/internal/diagnostics"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
@@ -20,8 +19,9 @@ var appIcon []byte
 
 func main() {
 	service := NewAppService()
-	controlServer := control.New(func(context.Context) diagnostics.Snapshot {
-		return service.Status()
+	defer func() { _ = service.Shutdown() }()
+	controlServer := control.New(func(context.Context) Overview {
+		return service.Overview()
 	})
 	if err := controlServer.Start(); err != nil {
 		log.Fatal(err)

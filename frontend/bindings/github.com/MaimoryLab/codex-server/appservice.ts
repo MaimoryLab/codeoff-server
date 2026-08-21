@@ -7,7 +7,18 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as appserver$0 from "./internal/appserver/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as diagnostics$0 from "./internal/diagnostics/models.js";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as $models from "./models.js";
+
+export function AppServerState(): $CancellablePromise<appserver$0.State> {
+    return $Call.ByID(1866680259);
+}
 
 export function InstallCodex(): $CancellablePromise<diagnostics$0.Snapshot> {
     return $Call.ByID(2252125960);
@@ -21,10 +32,26 @@ export function InstallProgress(): $CancellablePromise<string> {
     return $Call.ByID(962318050);
 }
 
+export function Overview(): $CancellablePromise<$models.Overview> {
+    return $Call.ByID(382676841);
+}
+
 export function RefreshStatus(): $CancellablePromise<diagnostics$0.Snapshot> {
     return $Call.ByID(1963326979);
 }
 
+export function Shutdown(): $CancellablePromise<void> {
+    return $Call.ByID(780008012);
+}
+
+export function StartAppServer(): $CancellablePromise<appserver$0.State> {
+    return $Call.ByID(2628644086);
+}
+
 export function Status(): $CancellablePromise<diagnostics$0.Snapshot> {
     return $Call.ByID(838280468);
+}
+
+export function StopAppServer(): $CancellablePromise<appserver$0.State> {
+    return $Call.ByID(4014769974);
 }

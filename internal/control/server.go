@@ -5,18 +5,14 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
-
-	"github.com/MaimoryLab/codex-server/internal/diagnostics"
 )
-
-type StatusProvider func(context.Context) diagnostics.Snapshot
 
 type Server struct {
 	httpServer *http.Server
 	listener   net.Listener
 }
 
-func New(status StatusProvider) *Server {
+func New[T any](status func(context.Context) T) *Server {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
