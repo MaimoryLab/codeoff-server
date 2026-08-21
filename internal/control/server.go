@@ -30,6 +30,10 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 	if len(appServers) > 0 {
 		appServer = appServers[0]
 	}
+	var events *eventHub
+	if appServer != nil {
+		events = newEventHub(appServer.Events())
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -95,7 +99,7 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 		return map[string]string{"threadId": r.URL.Query().Get("threadId"), "turnId": r.PathValue("turnID")}
 	})))
 	mux.Handle("POST /api/v1/approvals/{requestID}", authenticate(deviceStore, respondApproval(appServer)))
-	mux.Handle("GET /api/v1/events", authenticate(deviceStore, eventsStream(appServer)))
+	mux.Handle("GET /api/v1/events", authenticate(deviceStore, eventsStream(appServer, events)))
 	return &Server{httpServer: &http.Server{Handler: mux}}
 }
 
@@ -127,9 +131,9 @@ func callAppServer(appServer AppServer, method string, params func(*http.Request
 	})
 }
 
-func eventsStream(appServer AppServer) http.Handler {
+func eventsStream(appServer AppServer, hub *eventHub) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if appServer == nil {
+		if appServer == nil || hub == nil {
 			http.Error(w, "app-server is not running", http.StatusServiceUnavailable)
 			return
 		}
@@ -141,9 +145,11 @@ func eventsStream(appServer AppServer) http.Handler {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
+		events, unsubscribe := hub.subscribe()
+		defer unsubscribe()
 		for {
 			select {
-			case event, ok := <-appServer.Events():
+			case event, ok := <-events:
 				if !ok {
 					return
 				}
