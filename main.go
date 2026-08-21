@@ -25,7 +25,7 @@ func main() {
 	defer func() { _ = service.Shutdown() }()
 	controlServer := control.New(func(context.Context) Overview {
 		return service.Overview()
-	}, service.devices)
+	}, service.devices, service.appServer)
 	if err := controlServer.Start(); err != nil {
 		log.Fatal(err)
 	}

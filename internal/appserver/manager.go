@@ -2,6 +2,7 @@ package appserver
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"sync"
@@ -103,6 +104,20 @@ func (m *Manager) State() State {
 }
 
 func (m *Manager) Events() <-chan Event { return m.events }
+
+func (m *Manager) Call(ctx context.Context, method string, params any) (json.RawMessage, error) {
+	m.mu.RLock()
+	client := m.client
+	m.mu.RUnlock()
+	if client == nil {
+		return nil, errors.New("app-server is not running")
+	}
+	var result json.RawMessage
+	if err := client.Call(ctx, method, params, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
 
 func (m *Manager) watch(client *Client) {
 	for event := range client.Events() {
