@@ -5,7 +5,7 @@ Codex Remote is a local-first desktop bridge for controlling Codex from a phone.
 ## Requirements
 
 - Go 1.24+
-- Node.js and npm for the frontend
+- Node.js and pnpm for the frontend
 - Wails 3 CLI pinned to `v3.0.0-beta.11`
 
 Install the pinned CLI once:
@@ -17,7 +17,7 @@ go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.11
 ## Development
 
 ```sh
-npm --prefix frontend install
+pnpm --dir frontend install
 wails3 dev
 ```
 
