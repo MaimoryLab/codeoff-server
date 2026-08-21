@@ -66,7 +66,17 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 			http.Error(w, "encode status: "+err.Error(), http.StatusInternalServerError)
 		}
 	})))
-	mux.Handle("GET /api/v1/threads", authenticate(deviceStore, callAppServer(appServer, "thread/list", func(*http.Request) any { return map[string]any{} })))
+	mux.Handle("GET /api/v1/threads", authenticate(deviceStore, callAppServer(appServer, "thread/list", func(r *http.Request) any {
+		params := map[string]any{}
+		query := r.URL.Query()
+		if cursor := query.Get("cursor"); cursor != "" {
+			params["cursor"] = cursor
+		}
+		if limit, err := strconv.Atoi(query.Get("limit")); err == nil && limit > 0 {
+			params["limit"] = limit
+		}
+		return params
+	})))
 	mux.Handle("GET /api/v1/threads/{threadID}", authenticate(deviceStore, callAppServer(appServer, "thread/read", func(r *http.Request) any {
 		return map[string]any{"threadId": r.PathValue("threadID"), "includeTurns": true}
 	})))
