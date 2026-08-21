@@ -10,9 +10,26 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/MaimoryLab/codex-server/internal/appserver"
 	"github.com/MaimoryLab/codex-server/internal/devices"
 	"github.com/MaimoryLab/codex-server/internal/diagnostics"
 )
+
+type fakeApprovalServer struct {
+	id     int64
+	result any
+}
+
+func (s *fakeApprovalServer) Call(context.Context, string, any) (json.RawMessage, error) {
+	return json.RawMessage(`{}`), nil
+}
+
+func (s *fakeApprovalServer) Respond(id int64, result any, _ *appserver.RPCError) error {
+	s.id, s.result = id, result
+	return nil
+}
+
+func (s *fakeApprovalServer) Events() <-chan appserver.Event { return make(chan appserver.Event) }
 
 func TestPairExchangeAndAuthenticatedStatus(t *testing.T) {
 	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
@@ -66,5 +83,52 @@ func TestPairExchangeAndAuthenticatedStatus(t *testing.T) {
 	}
 	if _, err := io.ReadAll(authorized.Body); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestApprovalResponseRequiresAuthAndForwardsDecision(t *testing.T) {
+	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pairing, err := store.NewPairing()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fake := new(fakeApprovalServer)
+	server := New(func(context.Context) diagnostics.Snapshot { return diagnostics.Snapshot{} }, store, fake)
+	httpServer := httptest.NewServer(server.httpServer.Handler)
+	t.Cleanup(httpServer.Close)
+
+	pairBody, _ := json.Marshal(map[string]string{"token": pairing.Token, "name": "Phone"})
+	pairResponse, err := http.Post(httpServer.URL+"/api/v1/pair/exchange", "application/json", bytes.NewReader(pairBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pairResponse.Body.Close()
+	var exchange struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(pairResponse.Body).Decode(&exchange); err != nil {
+		t.Fatal(err)
+	}
+
+	request, _ := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/approvals/42", bytes.NewReader([]byte(`{"decision":"accept"}`)))
+	request.Header.Set("Authorization", "Bearer "+exchange.Token)
+	request.Header.Set("Content-Type", "application/json")
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+	if response.StatusCode != http.StatusNoContent {
+		t.Fatalf("approval status = %d", response.StatusCode)
+	}
+	if fake.id != 42 {
+		t.Fatalf("approval id = %d", fake.id)
+	}
+	result, ok := fake.result.(map[string]json.RawMessage)
+	if !ok || string(result["decision"]) != `"accept"` {
+		t.Fatalf("approval result = %#v", fake.result)
 	}
 }

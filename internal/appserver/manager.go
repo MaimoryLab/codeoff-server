@@ -119,6 +119,16 @@ func (m *Manager) Call(ctx context.Context, method string, params any) (json.Raw
 	return result, nil
 }
 
+func (m *Manager) Respond(id int64, result any, rpcError *RPCError) error {
+	m.mu.RLock()
+	client := m.client
+	m.mu.RUnlock()
+	if client == nil {
+		return errors.New("app-server is not running")
+	}
+	return client.Respond(id, result, rpcError)
+}
+
 func (m *Manager) watch(client *Client) {
 	for event := range client.Events() {
 		select {

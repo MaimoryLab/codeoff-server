@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/MaimoryLab/codex-server/internal/appserver"
@@ -20,6 +21,7 @@ type Server struct {
 
 type AppServer interface {
 	Call(context.Context, string, any) (json.RawMessage, error)
+	Respond(int64, any, *appserver.RPCError) error
 	Events() <-chan appserver.Event
 }
 
@@ -92,6 +94,7 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 	mux.Handle("POST /api/v1/turns/{turnID}/interrupt", authenticate(deviceStore, callAppServer(appServer, "turn/interrupt", func(r *http.Request) any {
 		return map[string]string{"threadId": r.URL.Query().Get("threadId"), "turnId": r.PathValue("turnID")}
 	})))
+	mux.Handle("POST /api/v1/approvals/{requestID}", authenticate(deviceStore, respondApproval(appServer)))
 	mux.Handle("GET /api/v1/events", authenticate(deviceStore, eventsStream(appServer)))
 	return &Server{httpServer: &http.Server{Handler: mux}}
 }
@@ -144,7 +147,11 @@ func eventsStream(appServer AppServer) http.Handler {
 				if !ok {
 					return
 				}
-				payload, _ := json.Marshal(map[string]any{"method": event.Method, "params": json.RawMessage(event.Params)})
+				payloadValue := map[string]any{"method": event.Method, "params": json.RawMessage(event.Params)}
+				if event.ID != nil {
+					payloadValue["id"] = *event.ID
+				}
+				payload, _ := json.Marshal(payloadValue)
 				_, _ = w.Write([]byte("data: " + string(payload) + "\n\n"))
 				flusher.Flush()
 			case <-r.Context().Done():
@@ -153,6 +160,61 @@ func eventsStream(appServer AppServer) http.Handler {
 		}
 	})
 }
+
+func respondApproval(appServer AppServer) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if appServer == nil {
+			http.Error(w, "app-server is not running", http.StatusServiceUnavailable)
+			return
+		}
+		requestID, err := strconv.ParseInt(r.PathValue("requestID"), 10, 64)
+		if err != nil || requestID < 1 {
+			http.Error(w, "invalid approval request id", http.StatusBadRequest)
+			return
+		}
+		var request struct {
+			Decision json.RawMessage `json:"decision"`
+		}
+		if err := decodeBody(r, &request); err != nil || !validApprovalDecision(request.Decision) {
+			http.Error(w, "invalid approval decision", http.StatusBadRequest)
+			return
+		}
+		if err := appServer.Respond(requestID, map[string]json.RawMessage{"decision": request.Decision}, nil); err != nil {
+			writeAppServerError(w, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	})
+}
+
+func validApprovalDecision(raw json.RawMessage) bool {
+	raw = json.RawMessage(strings.TrimSpace(string(raw)))
+	if len(raw) == 0 || bytesEqual(raw, []byte("null")) {
+		return false
+	}
+	var value string
+	if json.Unmarshal(raw, &value) == nil {
+		switch value {
+		case "accept", "acceptForSession", "decline", "cancel", "approved", "approved_for_session", "approved_mcp_policy_amendment", "timed_out", "abort":
+			return true
+		default:
+			return false
+		}
+	}
+	var object map[string]json.RawMessage
+	if json.Unmarshal(raw, &object) != nil || len(object) != 1 {
+		return false
+	}
+	for key := range object {
+		switch key {
+		case "acceptWithExecpolicyAmendment", "applyNetworkPolicyAmendment", "approved_execpolicy_amendment", "network_policy_amendment", "denied", "permissions":
+			return true
+		}
+	}
+	return false
+}
+
+func bytesEqual(left, right []byte) bool { return string(left) == string(right) }
 
 func writeRawJSON(w http.ResponseWriter, data json.RawMessage) {
 	w.Header().Set("Content-Type", "application/json")
