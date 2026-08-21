@@ -14,20 +14,22 @@ import (
 )
 
 type AppService struct {
-	mu         sync.RWMutex
-	installMu  sync.Mutex
-	status     diagnostics.Snapshot
-	progress   string
-	appServer  *appserver.Manager
-	devices    *devices.Store
-	tunnel     *tunnel.Manager
-	controlURL string
+	mu          sync.RWMutex
+	installMu   sync.Mutex
+	status      diagnostics.Snapshot
+	progress    string
+	appServer   *appserver.Manager
+	devices     *devices.Store
+	tunnel      *tunnel.Manager
+	controlURL  string
+	controlAddr string
 }
 
 type Overview struct {
 	Environment diagnostics.Snapshot `json:"environment"`
 	AppServer   appserver.State      `json:"appServer"`
 	Tunnel      tunnel.State         `json:"tunnel"`
+	ControlAddr string               `json:"controlAddr"`
 }
 
 func NewAppService() (*AppService, error) {
@@ -51,7 +53,12 @@ func (s *AppService) Devices() []devices.Device { return s.devices.List() }
 func (s *AppService) RevokeDevice(id string) error { return s.devices.Revoke(id) }
 
 func (s *AppService) Overview() Overview {
-	return Overview{Environment: s.Status(), AppServer: s.appServer.State(), Tunnel: s.tunnel.State()}
+	return Overview{
+		Environment: s.Status(),
+		AppServer:   s.appServer.State(),
+		Tunnel:      s.tunnel.State(),
+		ControlAddr: s.controlAddr,
+	}
 }
 
 func (s *AppService) AppServerState() appserver.State {
@@ -83,6 +90,8 @@ func (s *AppService) Shutdown() error {
 }
 
 func (s *AppService) SetControlURL(url string) { s.controlURL = url }
+
+func (s *AppService) setControlAddr(url string) { s.controlAddr = url }
 
 func (s *AppService) TunnelState() tunnel.State { return s.tunnel.State() }
 

@@ -30,12 +30,13 @@ func main() {
 		log.Fatal(err)
 	}
 	service.SetControlURL(controlServer.Addr())
+	service.setControlAddr(controlServer.LANAddr())
 	defer func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		_ = controlServer.Close(shutdownCtx)
 	}()
-	log.Printf("control API listening on %s (LAN: use this machine's IP and port)", controlServer.ListenAddr())
+	log.Printf("control API listening on %s (LAN: %s)", controlServer.ListenAddr(), controlServer.LANAddr())
 
 	app := application.New(application.Options{
 		Name:        "Codex Remote",

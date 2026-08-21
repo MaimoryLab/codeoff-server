@@ -22,12 +22,12 @@ let tunnelRunning = false;
 let tunnelURL = "";
 let pairingToken = "";
 let pairingExpiresAt = "";
+let controlAddr = "";
 
 type RuntimeState = {
     running: boolean;
     starting: boolean;
     startedAt: string;
-    codexHome?: string;
     userAgent?: string;
     error?: string;
 };
@@ -64,11 +64,11 @@ function render(snapshot: Snapshot) {
     message.textContent = "Environment check complete";
 }
 
-function renderAppServer(state: RuntimeState) {
+function renderAppServer(state: RuntimeState, address = controlAddr) {
     appServerRunning = state.running;
     appServerState.textContent = state.starting ? "Starting" : state.running ? "Running" : "Offline";
     appServerState.className = state.running ? "state-online" : "state-offline";
-    appServerDetail.textContent = state.error || state.codexHome || "Stopped";
+    appServerDetail.textContent = address || state.error || "Stopped";
     toggleAppServerButton.textContent = state.running ? "Stop" : "Start";
     toggleAppServerButton.disabled = state.starting;
 }
@@ -96,10 +96,11 @@ async function refresh() {
     refreshButton.disabled = true;
     message.textContent = "Checking local environment...";
     try {
-        const [environment, runtime, tunnel] = await Promise.all([AppService.RefreshStatus(), AppService.AppServerState(), AppService.TunnelState()]);
+        const [environment, overview] = await Promise.all([AppService.RefreshStatus(), AppService.Overview()]);
+        controlAddr = overview.controlAddr || "";
         render(environment);
-        renderAppServer(runtime);
-        renderTunnel(tunnel);
+        renderAppServer(overview.appServer);
+        renderTunnel(overview.tunnel);
         await refreshDevices();
     } catch (error) {
         message.textContent = error instanceof Error ? error.message : "Unable to check environment";

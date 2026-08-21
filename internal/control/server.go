@@ -298,6 +298,27 @@ func (s *Server) ListenAddr() string {
 	return s.listener.Addr().String()
 }
 
+func (s *Server) LANAddr() string {
+	if s.listener == nil {
+		return ""
+	}
+	_, port, err := net.SplitHostPort(s.listener.Addr().String())
+	if err != nil {
+		return ""
+	}
+	host := "127.0.0.1"
+	if addresses, err := net.InterfaceAddrs(); err == nil {
+		for _, address := range addresses {
+			ip, _, err := net.ParseCIDR(address.String())
+			if err == nil && ip.To4() != nil && !ip.IsLoopback() {
+				host = ip.String()
+				break
+			}
+		}
+	}
+	return "http://" + net.JoinHostPort(host, port)
+}
+
 func (s *Server) Close(ctx context.Context) error {
 	if s.listener == nil {
 		return nil

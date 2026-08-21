@@ -15,4 +15,5 @@ export interface Overview {
     "environment": diagnostics$0.Snapshot;
     "appServer": appserver$0.State;
     "tunnel": tunnel$0.State;
+    "controlAddr": string;
 }
