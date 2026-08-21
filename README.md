@@ -26,7 +26,15 @@ The current desktop panel checks `node`, `codex`, `codex app-server`, and `cloud
 ```text
 GET /healthz
 GET /api/v1/status
+POST /api/v1/pair/exchange
+GET /api/v1/threads
+POST /api/v1/threads
+POST /api/v1/threads/:threadID/turns
+POST /api/v1/turns/:turnID/interrupt?threadId=:threadID
+GET /api/v1/events
 ```
+
+Pair exchange is the only public API route. All other `/api/v1` routes require a device `Bearer` token.
 
 ## Build
 
