@@ -26,7 +26,7 @@ func TestManagerQuickTunnelProcess(t *testing.T) {
 		t.Skip("shell test uses a POSIX script")
 	}
 	script := t.TempDir() + "/cloudflared"
-	if err := writeExecutable(script, "#!/bin/sh\necho '{\"message\":\"https://demo.trycloudflare.com\"}' >&2\nsleep 30\n"); err != nil {
+	if err := writeExecutable(script, "#!/bin/sh\nfor arg in \"$@\"; do\n  if [ \"$arg\" = \"--output\" ]; then\n    echo '{\"message\":\"https://demo.trycloudflare.com\"}' >&2\n  fi\ndone\nsleep 30\n"); err != nil {
 		t.Fatal(err)
 	}
 	manager := NewManager()

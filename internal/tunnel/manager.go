@@ -44,7 +44,7 @@ func (m *Manager) Start(ctx context.Context, executable, origin string) (State, 
 	m.setState(State{Starting: true})
 
 	processCtx, cancel := context.WithCancel(context.Background())
-	command := exec.CommandContext(processCtx, executable, "tunnel", "--no-autoupdate", "--url", origin, "--logformat", "json")
+	command := exec.CommandContext(processCtx, executable, "tunnel", "--no-autoupdate", "--url", origin, "--output", "json")
 	stdout, err := command.StdoutPipe()
 	if err != nil {
 		cancel()
