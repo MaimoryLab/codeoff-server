@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/MaimoryLab/codex-server/internal/appserver"
+	"github.com/MaimoryLab/codex-server/internal/devices"
 	"github.com/MaimoryLab/codex-server/internal/diagnostics"
 	"github.com/MaimoryLab/codex-server/internal/installer"
 )
@@ -17,6 +18,7 @@ type AppService struct {
 	status    diagnostics.Snapshot
 	progress  string
 	appServer *appserver.Manager
+	devices   *devices.Store
 }
 
 type Overview struct {
@@ -24,11 +26,25 @@ type Overview struct {
 	AppServer   appserver.State      `json:"appServer"`
 }
 
-func NewAppService() *AppService {
-	service := &AppService{appServer: appserver.NewManager()}
+func NewAppService() (*AppService, error) {
+	devicePath, err := devices.DefaultPath()
+	if err != nil {
+		return nil, err
+	}
+	deviceStore, err := devices.Open(devicePath)
+	if err != nil {
+		return nil, err
+	}
+	service := &AppService{appServer: appserver.NewManager(), devices: deviceStore}
 	service.RefreshStatus()
-	return service
+	return service, nil
 }
+
+func (s *AppService) NewPairing() (devices.Pairing, error) { return s.devices.NewPairing() }
+
+func (s *AppService) Devices() []devices.Device { return s.devices.List() }
+
+func (s *AppService) RevokeDevice(id string) error { return s.devices.Revoke(id) }
 
 func (s *AppService) Overview() Overview {
 	return Overview{Environment: s.Status(), AppServer: s.appServer.State()}

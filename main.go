@@ -18,11 +18,14 @@ var assets embed.FS
 var appIcon []byte
 
 func main() {
-	service := NewAppService()
+	service, err := NewAppService()
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer func() { _ = service.Shutdown() }()
 	controlServer := control.New(func(context.Context) Overview {
 		return service.Overview()
-	})
+	}, service.devices)
 	if err := controlServer.Start(); err != nil {
 		log.Fatal(err)
 	}
