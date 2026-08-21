@@ -10,6 +10,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 import * as appserver$0 from "./internal/appserver/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as devices$0 from "./internal/devices/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as diagnostics$0 from "./internal/diagnostics/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -18,6 +21,10 @@ import * as $models from "./models.js";
 
 export function AppServerState(): $CancellablePromise<appserver$0.State> {
     return $Call.ByID(1866680259);
+}
+
+export function Devices(): $CancellablePromise<devices$0.Device[] | null> {
+    return $Call.ByID(4144524189);
 }
 
 export function InstallCodex(): $CancellablePromise<diagnostics$0.Snapshot> {
@@ -32,12 +39,20 @@ export function InstallProgress(): $CancellablePromise<string> {
     return $Call.ByID(962318050);
 }
 
+export function NewPairing(): $CancellablePromise<devices$0.Pairing> {
+    return $Call.ByID(141680464);
+}
+
 export function Overview(): $CancellablePromise<$models.Overview> {
     return $Call.ByID(382676841);
 }
 
 export function RefreshStatus(): $CancellablePromise<diagnostics$0.Snapshot> {
     return $Call.ByID(1963326979);
+}
+
+export function RevokeDevice(id: string): $CancellablePromise<void> {
+    return $Call.ByID(2660330386, id);
 }
 
 export function Shutdown(): $CancellablePromise<void> {

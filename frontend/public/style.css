@@ -34,4 +34,8 @@ h2 { margin-bottom: 8px; font-size: 22px; }
 .state-offline { color: #ef9a9a; }
 .next-step { margin-top: 36px; padding: 24px; }
 .next-step .button { margin-top: 8px; }
-@media (max-width: 640px) { .shell { width: min(100% - 32px, 920px); padding-top: 32px; } .topbar, .hero { gap: 18px; } .hero { display: block; margin-top: 32px; } .meta { margin-top: 18px; text-align: left; } .tool-grid { grid-template-columns: 1fr; } .service-row { align-items: flex-start; flex-direction: column; } }
+.pairing-code { overflow-wrap: anywhere; margin: 16px 0 0; color: #f2ce8c; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; }
+.devices-row { display: grid; grid-template-columns: minmax(180px, 1fr) 2fr; gap: 24px; margin-top: 36px; border-top: 1px solid #2a2f39; padding-top: 24px; }
+.device-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.device-list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #252a33; padding: 0 0 10px; font-size: 13px; }
+@media (max-width: 640px) { .shell { width: min(100% - 32px, 920px); padding-top: 32px; } .topbar, .hero { gap: 18px; } .hero { display: block; margin-top: 32px; } .meta { margin-top: 18px; text-align: left; } .tool-grid { grid-template-columns: 1fr; } .service-row, .devices-row { align-items: flex-start; flex-direction: column; } .devices-row { display: flex; } }

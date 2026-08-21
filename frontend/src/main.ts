@@ -10,6 +10,9 @@ const installCodexButton = document.querySelector<HTMLButtonElement>("#install-c
 const appServerState = document.querySelector<HTMLElement>("#app-server-state")!;
 const appServerDetail = document.querySelector<HTMLElement>("#app-server-detail")!;
 const toggleAppServerButton = document.querySelector<HTMLButtonElement>("#toggle-app-server")!;
+const bindDeviceButton = document.querySelector<HTMLButtonElement>("#bind-device")!;
+const pairingCode = document.querySelector<HTMLElement>("#pairing-code")!;
+const deviceList = document.querySelector<HTMLUListElement>("#device-list")!;
 let appServerRunning = false;
 
 type RuntimeState = {
@@ -20,6 +23,8 @@ type RuntimeState = {
     userAgent?: string;
     error?: string;
 };
+
+type Device = { id: string; name: string; createdAt: string; lastSeen: string };
 
 const tools: Record<string, HTMLElement> = {
     node: document.querySelector<HTMLElement>("#tool-node")!,
@@ -83,6 +88,58 @@ async function toggleAppServer() {
     }
 }
 
+function renderDevices(devices: Device[]) {
+    deviceList.replaceChildren();
+    if (devices.length === 0) {
+        const empty = document.createElement("li");
+        empty.className = "muted";
+        empty.textContent = "No devices bound";
+        deviceList.append(empty);
+        return;
+    }
+    for (const device of devices) {
+        const item = document.createElement("li");
+        const label = document.createElement("span");
+        label.textContent = `${device.name} · ${new Date(device.lastSeen).toLocaleString()}`;
+        const revoke = document.createElement("button");
+        revoke.className = "mini-button";
+        revoke.textContent = "Revoke";
+        revoke.addEventListener("click", () => void revokeDevice(device.id));
+        item.append(label, revoke);
+        deviceList.append(item);
+    }
+}
+
+async function refreshDevices() {
+    try {
+        renderDevices((await AppService.Devices()) ?? []);
+    } catch (error) {
+        message.textContent = error instanceof Error ? error.message : "Unable to load devices";
+    }
+}
+
+async function bindDevice() {
+    bindDeviceButton.disabled = true;
+    try {
+        const pairing = await AppService.NewPairing();
+        pairingCode.hidden = false;
+        pairingCode.textContent = `Pairing code: ${pairing.token} · expires ${new Date(pairing.expiresAt).toLocaleTimeString()}`;
+    } catch (error) {
+        message.textContent = error instanceof Error ? error.message : "Unable to create pairing code";
+    } finally {
+        bindDeviceButton.disabled = false;
+    }
+}
+
+async function revokeDevice(id: string) {
+    try {
+        await AppService.RevokeDevice(id);
+        await refreshDevices();
+    } catch (error) {
+        message.textContent = error instanceof Error ? error.message : "Unable to revoke device";
+    }
+}
+
 async function install(kind: "node" | "codex") {
     const button = kind === "node" ? installNodeButton : installCodexButton;
     button.disabled = true;
@@ -99,5 +156,7 @@ refreshButton.addEventListener("click", refresh);
 installNodeButton.addEventListener("click", () => void install("node"));
 installCodexButton.addEventListener("click", () => void install("codex"));
 toggleAppServerButton.addEventListener("click", () => void toggleAppServer());
+bindDeviceButton.addEventListener("click", () => void bindDevice());
 void refresh();
+void refreshDevices();
 window.setInterval(() => void AppService.AppServerState().then(renderAppServer).catch(() => undefined), 5000);

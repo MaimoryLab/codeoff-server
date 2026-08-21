@@ -26,7 +26,8 @@
         <div><p class="eyebrow">RUNTIME</p><h2 id="app-server-title">Codex app-server</h2><p id="app-server-detail" class="muted">Stopped</p></div>
         <div class="service-action"><strong id="app-server-state" class="state-offline">Offline</strong><button id="toggle-app-server" class="button secondary" type="button">Start</button></div>
     </section>
-    <section class="next-step"><p class="eyebrow">NEXT</p><h2>Connect a device</h2><p class="muted">Device pairing, session controls and Codex updates will appear here.</p><button class="button secondary" type="button" disabled>Bind new device</button></section>
+    <section class="next-step"><p class="eyebrow">DEVICES</p><h2>Connect a device</h2><p class="muted">Create a one-time pairing code for the mobile client.</p><button id="bind-device" class="button secondary" type="button">Bind new device</button><p id="pairing-code" class="pairing-code" hidden></p></section>
+    <section class="devices-row" aria-labelledby="devices-title"><div><p class="eyebrow">ACCESS</p><h2 id="devices-title">Bound devices</h2></div><ul id="device-list" class="device-list"><li class="muted">No devices bound</li></ul></section>
 </main>
 </body>
 </html>
