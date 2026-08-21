@@ -146,5 +146,8 @@ func findURL(reader io.Reader, result chan<- string) {
 			}
 			return
 		}
+		if err := scanner.Err(); err != nil {
+			return
+		}
 	}
 }
