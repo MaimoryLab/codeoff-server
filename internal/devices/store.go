@@ -79,6 +79,12 @@ func (s *Store) NewPairing() (Pairing, error) {
 	return Pairing{Token: token, ExpiresAt: expiresAt}, nil
 }
 
+func (s *Store) PairingActive() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return !s.pairingEnd.IsZero() && s.now().Before(s.pairingEnd)
+}
+
 func (s *Store) Exchange(pairingToken, name string) (Device, string, error) {
 	presented := sha256.Sum256([]byte(pairingToken))
 	s.mu.Lock()

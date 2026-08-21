@@ -48,6 +48,8 @@ func NewAppService() (*AppService, error) {
 
 func (s *AppService) NewPairing() (devices.Pairing, error) { return s.devices.NewPairing() }
 
+func (s *AppService) PairingActive() bool { return s.devices.PairingActive() }
+
 func (s *AppService) Devices() []devices.Device { return s.devices.List() }
 
 func (s *AppService) RevokeDevice(id string) error { return s.devices.Revoke(id) }

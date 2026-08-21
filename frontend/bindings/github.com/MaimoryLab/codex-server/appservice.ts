@@ -54,6 +54,10 @@ export function Overview(): $CancellablePromise<$models.Overview> {
     return $Call.ByID(382676841);
 }
 
+export function PairingActive(): $CancellablePromise<boolean> {
+    return $Call.ByID(319454048);
+}
+
 export function RefreshStatus(): $CancellablePromise<diagnostics$0.Snapshot> {
     return $Call.ByID(1963326979);
 }

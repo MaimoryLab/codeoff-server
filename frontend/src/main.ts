@@ -1,5 +1,6 @@
 import {AppService} from "../bindings/github.com/MaimoryLab/codex-server";
 import type {Snapshot, ToolStatus} from "../bindings/github.com/MaimoryLab/codex-server/internal/diagnostics/models.js";
+import {Clipboard} from "@wailsio/runtime";
 
 const checkedAt = document.querySelector<HTMLElement>("#checked-at")!;
 const platform = document.querySelector<HTMLElement>("#platform")!;
@@ -16,6 +17,8 @@ const tunnelDetail = document.querySelector<HTMLElement>("#tunnel-detail")!;
 const toggleTunnelButton = document.querySelector<HTMLButtonElement>("#toggle-tunnel")!;
 const bindDeviceButton = document.querySelector<HTMLButtonElement>("#bind-device")!;
 const pairingCode = document.querySelector<HTMLElement>("#pairing-code")!;
+const pairingValue = document.querySelector<HTMLElement>("#pairing-value")!;
+const copyPairingButton = document.querySelector<HTMLButtonElement>("#copy-pairing")!;
 const deviceList = document.querySelector<HTMLUListElement>("#device-list")!;
 let appServerRunning = false;
 let tunnelRunning = false;
@@ -89,7 +92,12 @@ function updatePairingCode() {
         return;
     }
     const endpoint = tunnelURL ? ` · endpoint ${tunnelURL}/api/v1/pair/exchange` : "";
-    pairingCode.textContent = `Pairing code: ${pairingToken}${endpoint} · expires ${pairingExpiresAt}`;
+    pairingValue.textContent = `Pairing code: ${pairingToken}${endpoint} · expires ${pairingExpiresAt}`;
+}
+
+function hidePairingCode() {
+    pairingToken = "";
+    pairingCode.hidden = true;
 }
 
 async function refresh() {
@@ -159,7 +167,9 @@ function renderDevices(devices: Device[]) {
 
 async function refreshDevices() {
     try {
-        renderDevices((await AppService.Devices()) ?? []);
+        const [devices, pairingActive] = await Promise.all([AppService.Devices(), AppService.PairingActive()]);
+        renderDevices(devices ?? []);
+        if (pairingToken && !pairingActive) hidePairingCode();
     } catch (error) {
         message.textContent = error instanceof Error ? error.message : "Unable to load devices";
     }
@@ -177,6 +187,16 @@ async function bindDevice() {
         message.textContent = error instanceof Error ? error.message : "Unable to create pairing code";
     } finally {
         bindDeviceButton.disabled = false;
+    }
+}
+
+async function copyPairingCode() {
+    if (!pairingToken) return;
+    try {
+        await Clipboard.SetText(pairingToken);
+        message.textContent = "Pairing code copied";
+    } catch (error) {
+        message.textContent = error instanceof Error ? error.message : "Unable to copy pairing code";
     }
 }
 
@@ -210,6 +230,7 @@ installCloudflaredButton.addEventListener("click", () => void install("cloudflar
 toggleAppServerButton.addEventListener("click", () => void toggleAppServer());
 toggleTunnelButton.addEventListener("click", () => void toggleTunnel());
 bindDeviceButton.addEventListener("click", () => void bindDevice());
+copyPairingButton.addEventListener("click", () => void copyPairingCode());
 void refresh();
 void refreshDevices();
 window.setInterval(() => {
