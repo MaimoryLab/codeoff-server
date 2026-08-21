@@ -139,6 +139,17 @@ func (s *AppService) InstallCodex() (diagnostics.Snapshot, error) {
 	return s.RefreshStatus(), nil
 }
 
+func (s *AppService) InstallCloudflared() (diagnostics.Snapshot, error) {
+	s.installMu.Lock()
+	defer s.installMu.Unlock()
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
+	if err := installer.New(s.setProgress).InstallCloudflared(ctx); err != nil {
+		return s.Status(), err
+	}
+	return s.RefreshStatus(), nil
+}
+
 func (s *AppService) InstallProgress() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

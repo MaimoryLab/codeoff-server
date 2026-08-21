@@ -44,6 +44,22 @@ func (i *Installer) InstallCodex(ctx context.Context) error {
 	return i.run(ctx, "npm", "install", "--global", "@openai/codex@latest")
 }
 
+func (i *Installer) InstallCloudflared(ctx context.Context) error {
+	switch runtime.GOOS {
+	case "darwin":
+		return i.run(ctx, "brew", "install", "cloudflared")
+	case "windows":
+		return i.run(ctx, "winget", "install", "--id", "Cloudflare.cloudflared", "--exact", "--accept-package-agreements", "--accept-source-agreements")
+	case "linux":
+		if _, err := exec.LookPath("brew"); err == nil {
+			return i.run(ctx, "brew", "install", "cloudflared")
+		}
+		return errors.New("automatic cloudflared installation on Linux requires Homebrew or Cloudflare's package repository")
+	default:
+		return fmt.Errorf("automatic cloudflared installation is unsupported on %s", runtime.GOOS)
+	}
+}
+
 func (i *Installer) run(ctx context.Context, name string, args ...string) error {
 	if _, err := exec.LookPath(name); err != nil {
 		return fmt.Errorf("%s is not installed", name)

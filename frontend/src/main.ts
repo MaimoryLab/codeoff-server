@@ -7,6 +7,7 @@ const message = document.querySelector<HTMLElement>("#message")!;
 const refreshButton = document.querySelector<HTMLButtonElement>("#refresh")!;
 const installNodeButton = document.querySelector<HTMLButtonElement>("#install-node")!;
 const installCodexButton = document.querySelector<HTMLButtonElement>("#install-codex")!;
+const installCloudflaredButton = document.querySelector<HTMLButtonElement>("#install-cloudflared")!;
 const appServerState = document.querySelector<HTMLElement>("#app-server-state")!;
 const appServerDetail = document.querySelector<HTMLElement>("#app-server-detail")!;
 const toggleAppServerButton = document.querySelector<HTMLButtonElement>("#toggle-app-server")!;
@@ -58,6 +59,8 @@ function render(snapshot: Snapshot) {
     installNodeButton.textContent = snapshot.node.installed ? "Installed" : "Install";
     installCodexButton.disabled = snapshot.codex.installed;
     installCodexButton.textContent = snapshot.codex.installed ? "Installed" : "Install";
+    installCloudflaredButton.disabled = snapshot.cloudflared.installed;
+    installCloudflaredButton.textContent = snapshot.cloudflared.installed ? "Installed" : "Install";
     message.textContent = "Environment check complete";
 }
 
@@ -184,12 +187,14 @@ async function revokeDevice(id: string) {
     }
 }
 
-async function install(kind: "node" | "codex") {
-    const button = kind === "node" ? installNodeButton : installCodexButton;
+async function install(kind: "node" | "codex" | "cloudflared") {
+    const button = kind === "node" ? installNodeButton : kind === "codex" ? installCodexButton : installCloudflaredButton;
     button.disabled = true;
-    message.textContent = `Installing ${kind === "node" ? "Node.js" : "Codex CLI"}...`;
+    const label = kind === "node" ? "Node.js" : kind === "codex" ? "Codex CLI" : "Cloudflared";
+    message.textContent = `Installing ${label}...`;
     try {
-        render(kind === "node" ? await AppService.InstallNode() : await AppService.InstallCodex());
+        const result = kind === "node" ? await AppService.InstallNode() : kind === "codex" ? await AppService.InstallCodex() : await AppService.InstallCloudflared();
+        render(result);
     } catch (error) {
         message.textContent = error instanceof Error ? error.message : "Installation failed";
         button.disabled = false;
@@ -199,6 +204,7 @@ async function install(kind: "node" | "codex") {
 refreshButton.addEventListener("click", refresh);
 installNodeButton.addEventListener("click", () => void install("node"));
 installCodexButton.addEventListener("click", () => void install("codex"));
+installCloudflaredButton.addEventListener("click", () => void install("cloudflared"));
 toggleAppServerButton.addEventListener("click", () => void toggleAppServer());
 toggleTunnelButton.addEventListener("click", () => void toggleTunnel());
 bindDeviceButton.addEventListener("click", () => void bindDevice());

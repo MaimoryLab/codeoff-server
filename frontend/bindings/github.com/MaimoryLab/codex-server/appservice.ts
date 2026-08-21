@@ -30,6 +30,10 @@ export function Devices(): $CancellablePromise<devices$0.Device[] | null> {
     return $Call.ByID(4144524189);
 }
 
+export function InstallCloudflared(): $CancellablePromise<diagnostics$0.Snapshot> {
+    return $Call.ByID(762362506);
+}
+
 export function InstallCodex(): $CancellablePromise<diagnostics$0.Snapshot> {
     return $Call.ByID(2252125960);
 }

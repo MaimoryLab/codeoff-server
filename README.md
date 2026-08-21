@@ -21,7 +21,7 @@ npm --prefix frontend install
 wails3 dev
 ```
 
-The current desktop panel checks `node`, `codex`, `codex app-server`, and `cloudflared`. It can install Node.js through the available platform package manager (Homebrew, winget, or apt) and install Codex through npm after an explicit button click. The local control API binds to an ephemeral loopback port and exposes:
+The current desktop panel checks `node`, `codex`, `codex app-server`, and `cloudflared`. It can install Node.js through the available platform package manager (Homebrew, winget, or apt), Codex through npm, and Cloudflared through Homebrew or winget after an explicit button click. The local control API binds to an ephemeral loopback port and exposes:
 
 ```text
 GET /healthz
@@ -31,6 +31,7 @@ GET /api/v1/threads
 POST /api/v1/threads
 POST /api/v1/threads/:threadID/turns
 POST /api/v1/turns/:turnID/interrupt?threadId=:threadID
+POST /api/v1/approvals/:requestID
 GET /api/v1/events
 ```
 
