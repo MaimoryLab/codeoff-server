@@ -69,10 +69,7 @@ func DefaultPath() (string, error) {
 }
 
 func (s *Store) NewPairing() (Pairing, error) {
-	token, err := randomToken(32)
-	if err != nil {
-		return Pairing{}, err
-	}
+	token := rand.Text()[:8]
 	expiresAt := s.now().Add(10 * time.Minute).UTC()
 	s.mu.Lock()
 	s.pairingHash = sha256.Sum256([]byte(token))

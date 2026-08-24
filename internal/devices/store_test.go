@@ -3,6 +3,7 @@ package devices
 import (
 	"errors"
 	"path/filepath"
+	"regexp"
 	"testing"
 	"time"
 )
@@ -16,6 +17,9 @@ func TestPairExchangeAuthenticateAndRevoke(t *testing.T) {
 	pairing, err := store.NewPairing()
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !regexp.MustCompile(`^[A-Z0-9]{8}$`).MatchString(pairing.Token) {
+		t.Fatalf("pairing token = %q", pairing.Token)
 	}
 	if !store.PairingActive() {
 		t.Fatal("new pairing is not active")
