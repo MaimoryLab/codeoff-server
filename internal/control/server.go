@@ -85,6 +85,7 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 			http.Error(w, "encode status: "+err.Error(), http.StatusInternalServerError)
 		}
 	})))
+	mux.Handle("GET /api/v1/directories", authenticate(deviceStore, http.HandlerFunc(listDirectories)))
 	mux.Handle("POST /api/v1/files", authenticate(deviceStore, http.HandlerFunc(server.uploadFile)))
 	mux.Handle("GET /api/v1/threads", authenticate(deviceStore, callAppServer(appServer, "thread/list", func(r *http.Request) any {
 		params := map[string]any{}
@@ -176,6 +177,56 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 	mux.Handle("GET /api/v1/events", authenticate(deviceStore, eventsStream(appServer, events)))
 	server.httpServer = &http.Server{Handler: mux}
 	return server
+}
+
+type directoryEntry struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+}
+
+func listDirectories(w http.ResponseWriter, r *http.Request) {
+	path := strings.TrimSpace(r.URL.Query().Get("path"))
+	if path == "" {
+		var err error
+		path, err = os.UserHomeDir()
+		if err != nil {
+			http.Error(w, "resolve home directory: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+	path, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		http.Error(w, "invalid directory path", http.StatusBadRequest)
+		return
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		http.Error(w, "directory not found", http.StatusBadRequest)
+		return
+	}
+	if !info.IsDir() {
+		http.Error(w, "path is not a directory", http.StatusBadRequest)
+		return
+	}
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		http.Error(w, "read directory: "+err.Error(), http.StatusForbidden)
+		return
+	}
+	directories := make([]directoryEntry, 0, len(entries))
+	for _, entry := range entries {
+		child := filepath.Join(path, entry.Name())
+		childInfo, err := os.Stat(child)
+		if err != nil || !childInfo.IsDir() {
+			continue
+		}
+		directories = append(directories, directoryEntry{Name: entry.Name(), Path: child})
+	}
+	parent := filepath.Dir(path)
+	if parent == path {
+		parent = ""
+	}
+	writeJSON(w, map[string]any{"path": path, "parent": parent, "directories": directories})
 }
 
 func (s *Server) uploadFile(w http.ResponseWriter, r *http.Request) {

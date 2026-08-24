@@ -8,6 +8,8 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -98,6 +100,62 @@ func TestPairExchangeAndAuthenticatedStatus(t *testing.T) {
 	}
 	if _, err := io.ReadAll(authorized.Body); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestDirectoriesListsOnlyDirectories(t *testing.T) {
+	root := t.TempDir()
+	child := filepath.Join(root, "project")
+	if err := os.Mkdir(child, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "notes.txt"), []byte("file"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pairing, err := store.NewPairing()
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := New(func(context.Context) diagnostics.Snapshot { return diagnostics.Snapshot{} }, store)
+	httpServer := httptest.NewServer(server.httpServer.Handler)
+	t.Cleanup(httpServer.Close)
+
+	pairBody, _ := json.Marshal(map[string]string{"token": pairing.Token, "name": "Phone"})
+	pairResponse, err := http.Post(httpServer.URL+"/api/v1/pair/exchange", "application/json", bytes.NewReader(pairBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pairResponse.Body.Close()
+	var exchange struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(pairResponse.Body).Decode(&exchange); err != nil {
+		t.Fatal(err)
+	}
+
+	request, _ := http.NewRequest(http.MethodGet, httpServer.URL+"/api/v1/directories?path="+url.QueryEscape(root), nil)
+	request.Header.Set("Authorization", "Bearer "+exchange.Token)
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", response.StatusCode)
+	}
+	var result struct {
+		Path        string           `json:"path"`
+		Directories []directoryEntry `json:"directories"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
+	if result.Path != root || len(result.Directories) != 1 || result.Directories[0].Name != "project" {
+		t.Fatalf("directories = %#v", result)
 	}
 }
 
