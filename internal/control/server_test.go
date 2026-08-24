@@ -53,6 +53,22 @@ func (s *fakeApprovalServer) Respond(id int64, result any, _ *appserver.RPCError
 
 func (s *fakeApprovalServer) Events() <-chan appserver.Event { return make(chan appserver.Event) }
 
+func TestStartUsesConfiguredAddress(t *testing.T) {
+	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := New(func(context.Context) diagnostics.Snapshot { return diagnostics.Snapshot{} }, store)
+	if err := server.Start("127.0.0.1:0"); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = server.Close(context.Background()) })
+	host, port, err := net.SplitHostPort(server.ListenAddr())
+	if err != nil || host != "127.0.0.1" || port == "0" {
+		t.Fatalf("listen address = %q", server.ListenAddr())
+	}
+}
+
 func TestPairExchangeAndAuthenticatedStatus(t *testing.T) {
 	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
 	if err != nil {
@@ -535,7 +551,7 @@ func TestStartBindsAllIPv4Interfaces(t *testing.T) {
 		t.Fatal(err)
 	}
 	server := New(func(context.Context) diagnostics.Snapshot { return diagnostics.Snapshot{} }, store)
-	if err := server.Start(); err != nil {
+	if err := server.Start("0.0.0.0:0"); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = server.Close(context.Background()) })

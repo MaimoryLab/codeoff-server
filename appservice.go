@@ -2,27 +2,41 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/MaimoryLab/codex-server/internal/appserver"
+	"github.com/MaimoryLab/codex-server/internal/control"
 	"github.com/MaimoryLab/codex-server/internal/devices"
 	"github.com/MaimoryLab/codex-server/internal/diagnostics"
 	"github.com/MaimoryLab/codex-server/internal/installer"
 	"github.com/MaimoryLab/codex-server/internal/tunnel"
 )
 
+const defaultListenAddr = "127.0.0.1:11037"
+
 type AppService struct {
-	mu          sync.RWMutex
-	installMu   sync.Mutex
-	status      diagnostics.Snapshot
-	progress    string
-	appServer   *appserver.Manager
-	devices     *devices.Store
-	tunnel      *tunnel.Manager
-	controlURL  string
-	controlAddr string
+	mu           sync.RWMutex
+	installMu    sync.Mutex
+	status       diagnostics.Snapshot
+	progress     string
+	appServer    *appserver.Manager
+	devices      *devices.Store
+	tunnel       *tunnel.Manager
+	controlURL   string
+	controlAddr  string
+	control      *control.Server
+	listenAddr   string
+	settingsPath string
+	controlMu    sync.Mutex
 }
 
 type Overview struct {
@@ -30,6 +44,7 @@ type Overview struct {
 	AppServer   appserver.State      `json:"appServer"`
 	Tunnel      tunnel.State         `json:"tunnel"`
 	ControlAddr string               `json:"controlAddr"`
+	ListenAddr  string               `json:"listenAddr"`
 }
 
 func NewAppService() (*AppService, error) {
@@ -41,7 +56,12 @@ func NewAppService() (*AppService, error) {
 	if err != nil {
 		return nil, err
 	}
-	service := &AppService{appServer: appserver.NewManager(), devices: deviceStore, tunnel: tunnel.NewManager()}
+	settingsPath := filepath.Join(filepath.Dir(devicePath), "settings.json")
+	listenAddr, err := loadListenAddr(settingsPath)
+	if err != nil {
+		return nil, err
+	}
+	service := &AppService{appServer: appserver.NewManager(), devices: deviceStore, tunnel: tunnel.NewManager(), listenAddr: listenAddr, settingsPath: settingsPath}
 	service.RefreshStatus()
 	return service, nil
 }
@@ -55,12 +75,70 @@ func (s *AppService) Devices() []devices.Device { return s.devices.List() }
 func (s *AppService) RevokeDevice(id string) error { return s.devices.Revoke(id) }
 
 func (s *AppService) Overview() Overview {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return Overview{
-		Environment: s.Status(),
+		Environment: s.status,
 		AppServer:   s.appServer.State(),
 		Tunnel:      s.tunnel.State(),
 		ControlAddr: s.controlAddr,
+		ListenAddr:  s.listenAddr,
 	}
+}
+
+func (s *AppService) startControlServer() error {
+	s.controlMu.Lock()
+	defer s.controlMu.Unlock()
+	s.mu.RLock()
+	address := s.listenAddr
+	s.mu.RUnlock()
+	return s.openControlServer(address)
+}
+
+func (s *AppService) openControlServer(address string) error {
+	server := control.New(func(context.Context) Overview { return s.Overview() }, s.devices, s.appServer)
+	if err := server.Start(address); err != nil {
+		return err
+	}
+	s.mu.Lock()
+	s.control, s.controlURL, s.controlAddr = server, server.Addr(), server.LANAddr()
+	s.mu.Unlock()
+	return nil
+}
+
+func (s *AppService) SetListenAddr(address string) (Overview, error) {
+	address, err := validateListenAddr(address)
+	if err != nil {
+		return s.Overview(), err
+	}
+	s.controlMu.Lock()
+	defer s.controlMu.Unlock()
+	s.mu.RLock()
+	oldAddress, oldServer := s.listenAddr, s.control
+	s.mu.RUnlock()
+	if address == oldAddress {
+		return s.Overview(), saveListenAddr(s.settingsPath, address)
+	}
+	_ = s.tunnel.Stop()
+	if oldServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		_ = oldServer.Close(ctx)
+		cancel()
+	}
+	s.mu.Lock()
+	s.control = nil
+	s.mu.Unlock()
+	if err := s.openControlServer(address); err != nil {
+		restoreErr := s.openControlServer(oldAddress)
+		return s.Overview(), errors.Join(err, restoreErr)
+	}
+	s.mu.Lock()
+	s.listenAddr = address
+	s.mu.Unlock()
+	if err := saveListenAddr(s.settingsPath, address); err != nil {
+		return s.Overview(), err
+	}
+	return s.Overview(), nil
 }
 
 func (s *AppService) AppServerState() appserver.State {
@@ -85,15 +163,19 @@ func (s *AppService) StopAppServer() (appserver.State, error) {
 }
 
 func (s *AppService) Shutdown() error {
-	if err := s.tunnel.Stop(); err != nil {
-		return err
+	s.controlMu.Lock()
+	defer s.controlMu.Unlock()
+	s.mu.RLock()
+	server := s.control
+	s.mu.RUnlock()
+	var controlErr error
+	if server != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		controlErr = server.Close(ctx)
+		cancel()
 	}
-	return s.appServer.Stop()
+	return errors.Join(s.tunnel.Stop(), s.appServer.Stop(), controlErr)
 }
-
-func (s *AppService) SetControlURL(url string) { s.controlURL = url }
-
-func (s *AppService) setControlAddr(url string) { s.controlAddr = url }
 
 func (s *AppService) TunnelState() tunnel.State { return s.tunnel.State() }
 
@@ -104,7 +186,10 @@ func (s *AppService) StartTunnel() (tunnel.State, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
 	defer cancel()
-	return s.tunnel.Start(ctx, status.Cloudflared.Path, s.controlURL)
+	s.mu.RLock()
+	controlURL := s.controlURL
+	s.mu.RUnlock()
+	return s.tunnel.Start(ctx, status.Cloudflared.Path, controlURL)
 }
 
 func (s *AppService) StopTunnel() (tunnel.State, error) {
@@ -171,4 +256,41 @@ func (s *AppService) setProgress(message string) {
 	s.mu.Lock()
 	s.progress = message
 	s.mu.Unlock()
+}
+
+func loadListenAddr(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return defaultListenAddr, nil
+	}
+	if err != nil {
+		return "", err
+	}
+	var settings struct {
+		ListenAddr string `json:"listenAddr"`
+	}
+	if err := json.Unmarshal(data, &settings); err != nil {
+		return "", fmt.Errorf("read settings: %w", err)
+	}
+	return validateListenAddr(settings.ListenAddr)
+}
+
+func saveListenAddr(path, address string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	data, _ := json.MarshalIndent(struct {
+		ListenAddr string `json:"listenAddr"`
+	}{address}, "", "  ")
+	return os.WriteFile(path, data, 0o600)
+}
+
+func validateListenAddr(address string) (string, error) {
+	address = strings.TrimSpace(address)
+	host, portText, err := net.SplitHostPort(address)
+	port, portErr := strconv.Atoi(portText)
+	if err != nil || net.ParseIP(host).To4() == nil || portErr != nil || port < 1 || port > 65535 {
+		return "", errors.New("listen address must be an IPv4 address and port, for example 127.0.0.1:11037")
+	}
+	return net.JoinHostPort(host, portText), nil
 }

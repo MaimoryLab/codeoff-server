@@ -66,8 +66,8 @@ export function RevokeDevice(id: string): $CancellablePromise<void> {
     return $Call.ByID(2660330386, id);
 }
 
-export function SetControlURL(url: string): $CancellablePromise<void> {
-    return $Call.ByID(4106560776, url);
+export function SetListenAddr(address: string): $CancellablePromise<$models.Overview> {
+    return $Call.ByID(572607266, address);
 }
 
 export function Shutdown(): $CancellablePromise<void> {

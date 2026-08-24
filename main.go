@@ -1,12 +1,9 @@
 package main
 
 import (
-	"context"
 	"embed"
 	"log"
-	"time"
 
-	"github.com/MaimoryLab/codex-server/internal/control"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 )
@@ -23,20 +20,10 @@ func main() {
 		log.Fatal(err)
 	}
 	defer func() { _ = service.Shutdown() }()
-	controlServer := control.New(func(context.Context) Overview {
-		return service.Overview()
-	}, service.devices, service.appServer)
-	if err := controlServer.Start(); err != nil {
+	if err := service.startControlServer(); err != nil {
 		log.Fatal(err)
 	}
-	service.SetControlURL(controlServer.Addr())
-	service.setControlAddr(controlServer.LANAddr())
-	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-		_ = controlServer.Close(shutdownCtx)
-	}()
-	log.Printf("control API listening on %s (LAN: %s)", controlServer.ListenAddr(), controlServer.LANAddr())
+	log.Printf("control API listening on %s", service.Overview().ControlAddr)
 
 	app := application.New(application.Options{
 		Name:        "Codex Remote",

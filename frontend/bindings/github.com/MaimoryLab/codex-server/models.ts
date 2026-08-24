@@ -16,4 +16,5 @@ export interface Overview {
     "appServer": appserver$0.State;
     "tunnel": tunnel$0.State;
     "controlAddr": string;
+    "listenAddr": string;
 }

@@ -515,8 +515,8 @@ func writeJSON(w http.ResponseWriter, value any) {
 	}
 }
 
-func (s *Server) Start() error {
-	listener, err := net.Listen("tcp4", "0.0.0.0:0")
+func (s *Server) Start(address string) error {
+	listener, err := net.Listen("tcp4", address)
 	if err != nil {
 		return err
 	}
@@ -531,11 +531,14 @@ func (s *Server) Addr() string {
 	if s.listener == nil {
 		return ""
 	}
-	_, port, err := net.SplitHostPort(s.listener.Addr().String())
+	host, port, err := net.SplitHostPort(s.listener.Addr().String())
 	if err != nil {
 		return ""
 	}
-	return "http://127.0.0.1:" + port
+	if host == "0.0.0.0" {
+		host = "127.0.0.1"
+	}
+	return "http://" + net.JoinHostPort(host, port)
 }
 
 func (s *Server) ListenAddr() string {
@@ -549,11 +552,14 @@ func (s *Server) LANAddr() string {
 	if s.listener == nil {
 		return ""
 	}
-	_, port, err := net.SplitHostPort(s.listener.Addr().String())
+	host, port, err := net.SplitHostPort(s.listener.Addr().String())
 	if err != nil {
 		return ""
 	}
-	host := "127.0.0.1"
+	if host != "0.0.0.0" {
+		return "http://" + net.JoinHostPort(host, port)
+	}
+	host = "127.0.0.1"
 	if addresses, err := net.InterfaceAddrs(); err == nil {
 		for _, address := range addresses {
 			ip, _, err := net.ParseCIDR(address.String())
