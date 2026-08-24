@@ -9,20 +9,31 @@ const refreshButton = document.querySelector<HTMLButtonElement>("#refresh")!;
 const installNodeButton = document.querySelector<HTMLButtonElement>("#install-node")!;
 const installCodexButton = document.querySelector<HTMLButtonElement>("#install-codex")!;
 const installCloudflaredButton = document.querySelector<HTMLButtonElement>("#install-cloudflared")!;
+const dashboard = document.querySelector<HTMLElement>("#dashboard")!;
 const appServerState = document.querySelector<HTMLElement>("#app-server-state")!;
 const appServerDetail = document.querySelector<HTMLElement>("#app-server-detail")!;
+const appServerAddress = document.querySelector<HTMLElement>("#app-server-address")!;
+const copyAppServerButton = document.querySelector<HTMLButtonElement>("#copy-app-server")!;
+const listenHost = document.querySelector<HTMLInputElement>("#listen-host")!;
+const listenPort = document.querySelector<HTMLInputElement>("#listen-port")!;
+const saveListenButton = document.querySelector<HTMLButtonElement>("#save-listen")!;
 const toggleAppServerButton = document.querySelector<HTMLButtonElement>("#toggle-app-server")!;
 const tunnelState = document.querySelector<HTMLElement>("#tunnel-state")!;
 const tunnelDetail = document.querySelector<HTMLElement>("#tunnel-detail")!;
+const tunnelAddress = document.querySelector<HTMLElement>("#tunnel-address")!;
+const tunnelAddressValue = document.querySelector<HTMLElement>("#tunnel-address-value")!;
+const copyTunnelButton = document.querySelector<HTMLButtonElement>("#copy-tunnel")!;
 const toggleTunnelButton = document.querySelector<HTMLButtonElement>("#toggle-tunnel")!;
 const bindDeviceButton = document.querySelector<HTMLButtonElement>("#bind-device")!;
 const pairingCode = document.querySelector<HTMLElement>("#pairing-code")!;
 const pairingValue = document.querySelector<HTMLElement>("#pairing-value")!;
+const pairingExpiry = document.querySelector<HTMLElement>("#pairing-expiry")!;
 const copyPairingButton = document.querySelector<HTMLButtonElement>("#copy-pairing")!;
 const deviceList = document.querySelector<HTMLUListElement>("#device-list")!;
 let appServerRunning = false;
 let tunnelRunning = false;
 let tunnelURL = "";
+let cloudflaredInstalled = false;
 let pairingToken = "";
 let pairingExpiresAt = "";
 let controlAddr = "";
@@ -58,12 +69,14 @@ function render(snapshot: Snapshot) {
     renderTool(tools.codex, snapshot.codex);
     renderTool(tools.appServer, snapshot.appServer);
     renderTool(tools.cloudflared, snapshot.cloudflared);
-    installNodeButton.disabled = snapshot.node.installed;
-    installNodeButton.textContent = snapshot.node.installed ? "Installed" : "Install";
-    installCodexButton.disabled = snapshot.codex.installed;
-    installCodexButton.textContent = snapshot.codex.installed ? "Installed" : "Install";
-    installCloudflaredButton.disabled = snapshot.cloudflared.installed;
-    installCloudflaredButton.textContent = snapshot.cloudflared.installed ? "Installed" : "Install";
+    dashboard.classList.toggle("ready", snapshot.node.installed && snapshot.codex.installed);
+    installNodeButton.disabled = false;
+    installNodeButton.textContent = snapshot.node.installed ? "Upgrade" : "Install";
+    installCodexButton.disabled = false;
+    installCodexButton.textContent = snapshot.codex.installed ? "Upgrade" : "Install";
+    installCloudflaredButton.disabled = false;
+    installCloudflaredButton.textContent = snapshot.cloudflared.installed ? "Upgrade" : "Install";
+    cloudflaredInstalled = snapshot.cloudflared.installed;
     message.textContent = "Environment check complete";
 }
 
@@ -71,7 +84,9 @@ function renderAppServer(state: RuntimeState, address = controlAddr) {
     appServerRunning = state.running;
     appServerState.textContent = state.starting ? "Starting" : state.running ? "Running" : "Offline";
     appServerState.className = state.running ? "state-online" : "state-offline";
-    appServerDetail.textContent = address || state.error || "Stopped";
+    appServerDetail.textContent = state.error || (state.running ? "Local control endpoint" : "Stopped");
+    appServerAddress.textContent = address || "-";
+    copyAppServerButton.disabled = !address;
     toggleAppServerButton.textContent = state.running ? "Stop" : "Start";
     toggleAppServerButton.disabled = state.starting;
 }
@@ -81,9 +96,12 @@ function renderTunnel(state: TunnelState) {
     tunnelURL = state.url || "";
     tunnelState.textContent = state.starting ? "Starting" : state.running ? "Online" : "Offline";
     tunnelState.className = state.running ? "state-online" : "state-offline";
-    tunnelDetail.textContent = state.error || state.url || "Stopped";
+    tunnelDetail.textContent = cloudflaredInstalled ? state.error || (state.running ? "Remote access enabled" : "Stopped") : "Install Cloudflared to enable remote access";
+    tunnelAddress.hidden = !tunnelURL;
+    tunnelAddressValue.textContent = tunnelURL || "-";
     toggleTunnelButton.textContent = state.running ? "Stop" : "Start";
-    toggleTunnelButton.disabled = state.starting;
+    toggleTunnelButton.disabled = state.starting || !cloudflaredInstalled;
+    toggleTunnelButton.title = cloudflaredInstalled ? "" : "Install Cloudflared first";
     updatePairingCode();
 }
 
@@ -91,8 +109,8 @@ function updatePairingCode() {
     if (!pairingToken) {
         return;
     }
-    const endpoint = tunnelURL ? ` · endpoint ${tunnelURL}/api/v1/pair/exchange` : "";
-    pairingValue.textContent = `Pairing code: ${pairingToken}${endpoint} · expires ${pairingExpiresAt}`;
+    pairingValue.textContent = pairingToken;
+    pairingExpiry.textContent = `Expires ${pairingExpiresAt}`;
 }
 
 function hidePairingCode() {
@@ -106,6 +124,7 @@ async function refresh() {
     try {
         const [environment, overview] = await Promise.all([AppService.RefreshStatus(), AppService.Overview()]);
         controlAddr = overview.controlAddr || "";
+        renderListenAddr(overview.listenAddr);
         render(environment);
         renderAppServer(overview.appServer);
         renderTunnel(overview.tunnel);
@@ -191,12 +210,41 @@ async function bindDevice() {
 }
 
 async function copyPairingCode() {
-    if (!pairingToken) return;
+    await copyText(pairingToken, "Pairing code");
+}
+
+async function copyText(value: string, label: string) {
+    if (!value) return;
     try {
-        await Clipboard.SetText(pairingToken);
-        message.textContent = "Pairing code copied";
+        await Clipboard.SetText(value);
+        message.textContent = `${label} copied`;
     } catch (error) {
-        message.textContent = error instanceof Error ? error.message : "Unable to copy pairing code";
+        message.textContent = error instanceof Error ? error.message : `Unable to copy ${label.toLowerCase()}`;
+    }
+}
+
+function renderListenAddr(address: string) {
+    const separator = address.lastIndexOf(":");
+    if (separator < 0) return;
+    listenHost.value = address.slice(0, separator);
+    listenPort.value = address.slice(separator + 1);
+}
+
+async function saveListenAddr() {
+    if (!listenHost.reportValidity() || !listenPort.reportValidity()) return;
+    saveListenButton.disabled = true;
+    message.textContent = "Restarting local server...";
+    try {
+        const overview = await AppService.SetListenAddr(`${listenHost.value.trim()}:${listenPort.value}`);
+        controlAddr = overview.controlAddr || "";
+        renderListenAddr(overview.listenAddr);
+        renderAppServer(overview.appServer);
+        renderTunnel(overview.tunnel);
+        message.textContent = "Local server restarted";
+    } catch (error) {
+        message.textContent = error instanceof Error ? error.message : "Unable to update listen address";
+    } finally {
+        saveListenButton.disabled = false;
     }
 }
 
@@ -213,10 +261,11 @@ async function install(kind: "node" | "codex" | "cloudflared") {
     const button = kind === "node" ? installNodeButton : kind === "codex" ? installCodexButton : installCloudflaredButton;
     button.disabled = true;
     const label = kind === "node" ? "Node.js" : kind === "codex" ? "Codex CLI" : "Cloudflared";
-    message.textContent = `Installing ${label}...`;
+    message.textContent = `${button.textContent === "Upgrade" ? "Upgrading" : "Installing"} ${label}...`;
     try {
         const result = kind === "node" ? await AppService.InstallNode() : kind === "codex" ? await AppService.InstallCodex() : await AppService.InstallCloudflared();
         render(result);
+        renderTunnel(await AppService.TunnelState());
     } catch (error) {
         message.textContent = error instanceof Error ? error.message : "Installation failed";
         button.disabled = false;
@@ -231,6 +280,9 @@ toggleAppServerButton.addEventListener("click", () => void toggleAppServer());
 toggleTunnelButton.addEventListener("click", () => void toggleTunnel());
 bindDeviceButton.addEventListener("click", () => void bindDevice());
 copyPairingButton.addEventListener("click", () => void copyPairingCode());
+copyAppServerButton.addEventListener("click", () => void copyText(controlAddr, "Local address"));
+copyTunnelButton.addEventListener("click", () => void copyText(tunnelURL, "Cloudflare address"));
+saveListenButton.addEventListener("click", () => void saveListenAddr());
 void refresh();
 void refreshDevices();
 window.setInterval(() => {

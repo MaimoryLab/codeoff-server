@@ -18,7 +18,7 @@
             <div class="panel-heading"><div><p class="eyebrow">RUNTIME</p><h2 id="app-server-title">Codex app-server</h2></div><div class="service-action"><strong id="app-server-state" class="state-offline">Offline</strong><button id="toggle-app-server" class="button secondary" type="button">Start</button></div></div>
             <p id="app-server-detail" class="muted">Stopped</p>
             <div class="copy-field"><span id="app-server-address">-</span><button id="copy-app-server" class="mini-button" type="button">Copy</button></div>
-            <div class="listen-settings"><label>Listen address<input id="listen-host" type="text" inputmode="decimal" autocomplete="off" value="127.0.0.1" /></label><label>Port<input id="listen-port" type="number" min="1" max="65535" value="11037" /></label><button id="save-listen" class="mini-button" type="button">Save &amp; restart</button></div>
+            <div class="listen-settings"><label>Listen address<input id="listen-host" type="text" inputmode="decimal" autocomplete="off" value="127.0.0.1" required /></label><label>Port<input id="listen-port" type="number" min="1" max="65535" value="11037" required /></label><button id="save-listen" class="mini-button" type="button">Save &amp; restart</button></div>
         </section>
         <section class="panel installed-only" aria-labelledby="tunnel-title">
             <div class="panel-heading"><div><p class="eyebrow">REMOTE ACCESS</p><h2 id="tunnel-title">Cloudflare Tunnel</h2></div><div class="service-action"><strong id="tunnel-state" class="state-offline">Offline</strong><button id="toggle-tunnel" class="button secondary" type="button">Start</button></div></div>
