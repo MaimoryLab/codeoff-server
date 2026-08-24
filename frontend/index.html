@@ -12,26 +12,34 @@
         <div><p class="eyebrow">LOCAL CONTROL</p><h1>Codex Remote</h1></div>
         <button id="refresh" class="button" type="button">Refresh</button>
     </header>
-    <section class="hero" aria-labelledby="status-title">
-        <div><p class="eyebrow">DESKTOP SERVICE</p><h2 id="status-title">Environment status</h2><p id="message" class="muted">Checking local environment...</p></div>
-        <div class="meta"><strong id="platform">-</strong><span id="checked-at">-</span></div>
-    </section>
-    <section class="tool-grid" aria-label="Local tools">
-        <article class="tool-card"><div><span>Node.js</span><strong id="tool-node" class="tool-status">Checking</strong></div><button id="install-node" class="mini-button" type="button">Install</button></article>
-        <article class="tool-card"><div><span>Codex CLI</span><strong id="tool-codex" class="tool-status">Checking</strong></div><button id="install-codex" class="mini-button" type="button">Install</button></article>
-        <article class="tool-card"><span>App server</span><strong id="tool-app-server" class="tool-status">Checking</strong></article>
-        <article class="tool-card"><div><span>Cloudflared</span><strong id="tool-cloudflared" class="tool-status">Checking</strong></div><button id="install-cloudflared" class="mini-button" type="button">Install</button></article>
-    </section>
-    <section class="service-row" aria-labelledby="app-server-title">
-        <div><p class="eyebrow">RUNTIME</p><h2 id="app-server-title">Codex app-server</h2><p id="app-server-detail" class="muted">Stopped</p></div>
-        <div class="service-action"><strong id="app-server-state" class="state-offline">Offline</strong><button id="toggle-app-server" class="button secondary" type="button">Start</button></div>
-    </section>
-    <section class="service-row" aria-labelledby="tunnel-title">
-        <div><p class="eyebrow">REMOTE ACCESS</p><h2 id="tunnel-title">Cloudflare Tunnel</h2><p id="tunnel-detail" class="muted">Stopped</p></div>
-        <div class="service-action"><strong id="tunnel-state" class="state-offline">Offline</strong><button id="toggle-tunnel" class="button secondary" type="button">Start</button></div>
-    </section>
-    <section class="next-step"><p class="eyebrow">DEVICES</p><h2>Connect a device</h2><p class="muted">Create a one-time pairing code for the mobile client.</p><button id="bind-device" class="button secondary" type="button">Bind new device</button><div id="pairing-code" class="pairing-code" hidden><span id="pairing-value"></span><button id="copy-pairing" class="mini-button" type="button">Copy</button></div></section>
-    <section class="devices-row" aria-labelledby="devices-title"><div><p class="eyebrow">ACCESS</p><h2 id="devices-title">Bound devices</h2></div><ul id="device-list" class="device-list"><li class="muted">No devices bound</li></ul></section>
+    <p id="message" class="notice muted">Checking local environment...</p>
+    <div id="dashboard" class="dashboard">
+        <section class="panel installed-only" aria-labelledby="app-server-title">
+            <div class="panel-heading"><div><p class="eyebrow">RUNTIME</p><h2 id="app-server-title">Codex app-server</h2></div><div class="service-action"><strong id="app-server-state" class="state-offline">Offline</strong><button id="toggle-app-server" class="button secondary" type="button">Start</button></div></div>
+            <p id="app-server-detail" class="muted">Stopped</p>
+            <div class="copy-field"><span id="app-server-address">-</span><button id="copy-app-server" class="mini-button" type="button">Copy</button></div>
+            <div class="listen-settings"><label>Listen address<input id="listen-host" type="text" inputmode="decimal" autocomplete="off" value="127.0.0.1" /></label><label>Port<input id="listen-port" type="number" min="1" max="65535" value="11037" /></label><button id="save-listen" class="mini-button" type="button">Save &amp; restart</button></div>
+        </section>
+        <section class="panel installed-only" aria-labelledby="tunnel-title">
+            <div class="panel-heading"><div><p class="eyebrow">REMOTE ACCESS</p><h2 id="tunnel-title">Cloudflare Tunnel</h2></div><div class="service-action"><strong id="tunnel-state" class="state-offline">Offline</strong><button id="toggle-tunnel" class="button secondary" type="button">Start</button></div></div>
+            <p id="tunnel-detail" class="muted">Stopped</p>
+            <div id="tunnel-address" class="copy-field" hidden><span id="tunnel-address-value">-</span><button id="copy-tunnel" class="mini-button" type="button">Copy</button></div>
+        </section>
+        <section class="panel installed-only" aria-labelledby="devices-title">
+            <div class="panel-heading"><div><p class="eyebrow">DEVICES</p><h2 id="devices-title">Bound devices</h2></div><button id="bind-device" class="button secondary" type="button">Bind new device</button></div>
+            <div id="pairing-code" hidden><p id="pairing-expiry" class="muted"></p><div class="copy-field"><span id="pairing-value"></span><button id="copy-pairing" class="mini-button" type="button">Copy</button></div></div>
+            <ul id="device-list" class="device-list"><li class="muted">No devices bound</li></ul>
+        </section>
+        <section id="environment-card" class="panel environment-card" aria-labelledby="status-title">
+            <div class="panel-heading"><div><p class="eyebrow">ENVIRONMENT</p><h2 id="status-title">Environment status</h2></div><div class="meta"><strong id="platform">-</strong><span id="checked-at">-</span></div></div>
+            <div class="tool-list" aria-label="Local tools">
+                <div class="tool-row"><div><span>Node.js</span><strong id="tool-node" class="tool-status">Checking</strong></div><button id="install-node" class="mini-button" type="button">Install</button></div>
+                <div class="tool-row"><div><span>Codex CLI</span><strong id="tool-codex" class="tool-status">Checking</strong></div><button id="install-codex" class="mini-button" type="button">Install</button></div>
+                <div class="tool-row"><div><span>App server</span><strong id="tool-app-server" class="tool-status">Checking</strong></div></div>
+                <div class="tool-row"><div><span>Cloudflared</span><strong id="tool-cloudflared" class="tool-status">Checking</strong></div><button id="install-cloudflared" class="mini-button" type="button">Install</button></div>
+            </div>
+        </section>
+    </div>
 </main>
 <script type="module" src="/src/main.ts"></script>
 </body>
