@@ -34,6 +34,11 @@ func (s *fakeApprovalServer) ReleaseThread(_ context.Context, threadID string) (
 	return true, nil
 }
 
+func (s *fakeApprovalServer) TakeOverThread(_ context.Context, threadID string) (json.RawMessage, error) {
+	s.method, s.params = "thread/takeover", map[string]string{"threadId": threadID}
+	return json.RawMessage(`{"thread":{"id":"thread-42"}}`), nil
+}
+
 func (s *fakeApprovalServer) Respond(id int64, result any, _ *appserver.RPCError) error {
 	s.id, s.result = id, result
 	return nil
@@ -201,6 +206,18 @@ func TestThreadActionsForwardThreadID(t *testing.T) {
 		}
 		defer response.Body.Close()
 		if response.StatusCode != http.StatusOK || fake.method != "thread/release" {
+			t.Fatalf("status = %d, method = %q", response.StatusCode, fake.method)
+		}
+	})
+	t.Run("takeover", func(t *testing.T) {
+		request, _ := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/threads/thread-42/takeover", bytes.NewReader([]byte(`{}`)))
+		request.Header.Set("Authorization", "Bearer "+exchange.Token)
+		response, err := http.DefaultClient.Do(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer response.Body.Close()
+		if response.StatusCode != http.StatusOK || fake.method != "thread/takeover" {
 			t.Fatalf("status = %d, method = %q", response.StatusCode, fake.method)
 		}
 	})

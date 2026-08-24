@@ -38,6 +38,7 @@ type turnRequest struct {
 type AppServer interface {
 	Call(context.Context, string, any) (json.RawMessage, error)
 	ReleaseThread(context.Context, string) (bool, error)
+	TakeOverThread(context.Context, string) (json.RawMessage, error)
 	Respond(int64, any, *appserver.RPCError) error
 	Events() <-chan appserver.Event
 }
@@ -119,6 +120,7 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 		return map[string]string{"threadId": r.PathValue("threadID")}
 	})))
 	mux.Handle("POST /api/v1/threads/{threadID}/release", authenticate(deviceStore, releaseThread(appServer)))
+	mux.Handle("POST /api/v1/threads/{threadID}/takeover", authenticate(deviceStore, takeOverThread(appServer)))
 	mux.Handle("POST /api/v1/threads/{threadID}/name", authenticate(deviceStore, callAppServer(appServer, "thread/name/set", func(r *http.Request) any {
 		var request struct {
 			Name string `json:"name"`
@@ -296,6 +298,21 @@ func releaseThread(appServer AppServer) http.Handler {
 			return
 		}
 		writeJSON(w, map[string]bool{"released": released})
+	})
+}
+
+func takeOverThread(appServer AppServer) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if appServer == nil {
+			http.Error(w, "app-server is not running", http.StatusServiceUnavailable)
+			return
+		}
+		result, err := appServer.TakeOverThread(r.Context(), r.PathValue("threadID"))
+		if err != nil {
+			writeAppServerError(w, err)
+			return
+		}
+		writeRawJSON(w, result)
 	})
 }
 
