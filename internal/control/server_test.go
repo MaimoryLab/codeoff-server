@@ -29,6 +29,11 @@ func (s *fakeApprovalServer) Call(_ context.Context, method string, params any) 
 	return json.RawMessage(`{}`), nil
 }
 
+func (s *fakeApprovalServer) ReleaseThread(_ context.Context, threadID string) (bool, error) {
+	s.method, s.params = "thread/release", map[string]string{"threadId": threadID}
+	return true, nil
+}
+
 func (s *fakeApprovalServer) Respond(id int64, result any, _ *appserver.RPCError) error {
 	s.id, s.result = id, result
 	return nil
@@ -187,6 +192,18 @@ func TestThreadActionsForwardThreadID(t *testing.T) {
 			}
 		})
 	}
+	t.Run("release", func(t *testing.T) {
+		request, _ := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/threads/thread-42/release", bytes.NewReader([]byte(`{}`)))
+		request.Header.Set("Authorization", "Bearer "+exchange.Token)
+		response, err := http.DefaultClient.Do(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer response.Body.Close()
+		if response.StatusCode != http.StatusOK || fake.method != "thread/release" {
+			t.Fatalf("status = %d, method = %q", response.StatusCode, fake.method)
+		}
+	})
 	t.Run("name", func(t *testing.T) {
 		request, _ := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/threads/thread-42/name", bytes.NewReader([]byte(`{"name":"Renamed"}`)))
 		request.Header.Set("Authorization", "Bearer "+exchange.Token)

@@ -28,6 +28,7 @@ type Manager struct {
 	state       State
 	events      chan Event
 	start       startClient
+	executable  string
 }
 
 func NewManager() *Manager {
@@ -41,6 +42,10 @@ func newManager(start startClient) *Manager {
 func (m *Manager) Start(ctx context.Context, executable string) (State, error) {
 	m.operationMu.Lock()
 	defer m.operationMu.Unlock()
+	return m.startLocked(ctx, executable)
+}
+
+func (m *Manager) startLocked(ctx context.Context, executable string) (State, error) {
 	if state := m.State(); state.Running || state.Starting {
 		return state, nil
 	}
@@ -75,6 +80,7 @@ func (m *Manager) Start(ctx context.Context, executable string) (State, error) {
 	m.client = client
 	m.cancel = cancel
 	m.state = state
+	m.executable = executable
 	m.mu.Unlock()
 	go m.watch(client)
 	return state, nil
@@ -83,6 +89,10 @@ func (m *Manager) Start(ctx context.Context, executable string) (State, error) {
 func (m *Manager) Stop() error {
 	m.operationMu.Lock()
 	defer m.operationMu.Unlock()
+	return m.stopLocked()
+}
+
+func (m *Manager) stopLocked() error {
 	m.mu.Lock()
 	client, cancel := m.client, m.cancel
 	m.client, m.cancel = nil, nil
@@ -106,6 +116,8 @@ func (m *Manager) State() State {
 func (m *Manager) Events() <-chan Event { return m.events }
 
 func (m *Manager) Call(ctx context.Context, method string, params any) (json.RawMessage, error) {
+	m.operationMu.Lock()
+	defer m.operationMu.Unlock()
 	m.mu.RLock()
 	client := m.client
 	m.mu.RUnlock()
@@ -117,6 +129,63 @@ func (m *Manager) Call(ctx context.Context, method string, params any) (json.Raw
 		return nil, err
 	}
 	return result, nil
+}
+
+func (m *Manager) ReleaseThread(ctx context.Context, threadID string) (bool, error) {
+	m.operationMu.Lock()
+	defer m.operationMu.Unlock()
+	m.mu.RLock()
+	client, executable := m.client, m.executable
+	m.mu.RUnlock()
+	if client == nil {
+		return false, errors.New("app-server is not running")
+	}
+	if err := client.Call(ctx, "thread/unsubscribe", map[string]string{"threadId": threadID}, nil); err != nil {
+		return false, err
+	}
+	active, err := hasActiveThreads(ctx, client)
+	if err != nil || active {
+		return false, err
+	}
+	stopErr := m.stopLocked()
+	_, startErr := m.startLocked(ctx, executable)
+	return startErr == nil, errors.Join(stopErr, startErr)
+}
+
+func hasActiveThreads(ctx context.Context, client *Client) (bool, error) {
+	var cursor string
+	for {
+		var loaded struct {
+			Data       []string `json:"data"`
+			NextCursor string   `json:"nextCursor"`
+		}
+		params := map[string]string{}
+		if cursor != "" {
+			params["cursor"] = cursor
+		}
+		if err := client.Call(ctx, "thread/loaded/list", params, &loaded); err != nil {
+			return false, err
+		}
+		for _, id := range loaded.Data {
+			var result struct {
+				Thread struct {
+					Status struct {
+						Type string `json:"type"`
+					} `json:"status"`
+				} `json:"thread"`
+			}
+			if err := client.Call(ctx, "thread/read", map[string]any{"threadId": id, "includeTurns": false}, &result); err != nil {
+				return false, err
+			}
+			if result.Thread.Status.Type == "active" {
+				return true, nil
+			}
+		}
+		if loaded.NextCursor == "" || loaded.NextCursor == cursor {
+			return false, nil
+		}
+		cursor = loaded.NextCursor
+	}
 }
 
 func (m *Manager) Respond(id int64, result any, rpcError *RPCError) error {
