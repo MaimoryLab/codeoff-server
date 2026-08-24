@@ -4,19 +4,35 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/MaimoryLab/codex-server/internal/appserver"
 	"github.com/MaimoryLab/codex-server/internal/devices"
 )
 
+const maxUploadSize = 25 << 20
+
 type Server struct {
 	httpServer *http.Server
 	listener   net.Listener
+	uploadMu   sync.RWMutex
+	uploads    map[string]bool
+}
+
+type turnRequest struct {
+	Input       string `json:"input"`
+	Attachments []struct {
+		Name string `json:"name"`
+		Path string `json:"path"`
+	} `json:"attachments"`
 }
 
 type AppServer interface {
@@ -26,6 +42,7 @@ type AppServer interface {
 }
 
 func New[T any](status func(context.Context) T, deviceStore *devices.Store, appServers ...AppServer) *Server {
+	server := &Server{uploads: make(map[string]bool)}
 	var appServer AppServer
 	if len(appServers) > 0 {
 		appServer = appServers[0]
@@ -66,6 +83,7 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 			http.Error(w, "encode status: "+err.Error(), http.StatusInternalServerError)
 		}
 	})))
+	mux.Handle("POST /api/v1/files", authenticate(deviceStore, http.HandlerFunc(server.uploadFile)))
 	mux.Handle("GET /api/v1/threads", authenticate(deviceStore, callAppServer(appServer, "thread/list", func(r *http.Request) any {
 		params := map[string]any{}
 		query := r.URL.Query()
@@ -115,35 +133,36 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 		return map[string]string{"threadId": r.PathValue("threadID")}
 	})))
 	mux.Handle("POST /api/v1/threads/{threadID}/turns", authenticate(deviceStore, callAppServer(appServer, "turn/start", func(r *http.Request) any {
-		var request struct {
-			Input string `json:"input"`
-		}
+		var request turnRequest
 		if err := decodeBody(r, &request); err != nil {
 			return requestError{err}
 		}
-		if strings.TrimSpace(request.Input) == "" {
-			return requestError{errors.New("input is required")}
+		input, err := server.userInput(request)
+		if err != nil {
+			return requestError{err}
 		}
 		return map[string]any{
 			"threadId": r.PathValue("threadID"),
-			"input":    []map[string]string{{"type": "text", "text": request.Input}},
+			"input":    input,
 		}
 	})))
 	mux.Handle("POST /api/v1/turns/{turnID}/steer", authenticate(deviceStore, callAppServer(appServer, "turn/steer", func(r *http.Request) any {
-		var request struct {
-			Input string `json:"input"`
-		}
+		var request turnRequest
 		if err := decodeBody(r, &request); err != nil {
 			return requestError{err}
 		}
 		threadID := r.URL.Query().Get("threadId")
-		if threadID == "" || strings.TrimSpace(request.Input) == "" {
-			return requestError{errors.New("threadId and input are required")}
+		input, err := server.userInput(request)
+		if threadID == "" || err != nil {
+			if err == nil {
+				err = errors.New("threadId is required")
+			}
+			return requestError{err}
 		}
 		return map[string]any{
 			"threadId":       threadID,
 			"expectedTurnId": r.PathValue("turnID"),
-			"input":          []map[string]string{{"type": "text", "text": request.Input}},
+			"input":          input,
 		}
 	})))
 	mux.Handle("POST /api/v1/turns/{turnID}/interrupt", authenticate(deviceStore, callAppServer(appServer, "turn/interrupt", func(r *http.Request) any {
@@ -151,7 +170,88 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 	})))
 	mux.Handle("POST /api/v1/approvals/{requestID}", authenticate(deviceStore, respondApproval(appServer)))
 	mux.Handle("GET /api/v1/events", authenticate(deviceStore, eventsStream(appServer, events)))
-	return &Server{httpServer: &http.Server{Handler: mux}}
+	server.httpServer = &http.Server{Handler: mux}
+	return server
+}
+
+func (s *Server) uploadFile(w http.ResponseWriter, r *http.Request) {
+	name := filepath.Base(strings.TrimSpace(r.URL.Query().Get("name")))
+	if name == "." || name == "" {
+		http.Error(w, "name is required", http.StatusBadRequest)
+		return
+	}
+	if r.ContentLength > maxUploadSize {
+		http.Error(w, "file is too large", http.StatusRequestEntityTooLarge)
+		return
+	}
+	extension := filepath.Ext(name)
+	if len(extension) > 16 {
+		extension = ""
+	}
+	file, err := os.CreateTemp("", "codex-remote-*"+extension)
+	if err != nil {
+		http.Error(w, "create upload: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	path := file.Name()
+	written, copyErr := io.Copy(file, io.LimitReader(r.Body, maxUploadSize+1))
+	if written == 0 || written > maxUploadSize || copyErr != nil {
+		_ = file.Close()
+		_ = os.Remove(path)
+		if written > maxUploadSize {
+			http.Error(w, "file is too large", http.StatusRequestEntityTooLarge)
+		} else {
+			http.Error(w, "invalid file", http.StatusBadRequest)
+		}
+		return
+	}
+	header := make([]byte, 512)
+	_, _ = file.Seek(0, io.SeekStart)
+	n, _ := file.Read(header)
+	if err := file.Close(); err != nil {
+		_ = os.Remove(path)
+		http.Error(w, "save upload: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	image := strings.HasPrefix(http.DetectContentType(header[:n]), "image/") ||
+		strings.Contains(" .heic .heif .webp ", " "+strings.ToLower(extension)+" ")
+	s.uploadMu.Lock()
+	s.uploads[path] = image
+	s.uploadMu.Unlock()
+	writeJSON(w, map[string]any{"path": path, "image": image})
+}
+
+func (s *Server) userInput(request turnRequest) ([]map[string]string, error) {
+	text := strings.TrimSpace(request.Input)
+	if text == "" && len(request.Attachments) == 0 {
+		return nil, errors.New("input or attachments are required")
+	}
+	input := make([]map[string]string, 0, len(request.Attachments)+1)
+	var files strings.Builder
+	for _, attachment := range request.Attachments {
+		s.uploadMu.RLock()
+		image, ok := s.uploads[attachment.Path]
+		s.uploadMu.RUnlock()
+		if !ok {
+			return nil, errors.New("invalid attachment path")
+		}
+		name := filepath.Base(strings.TrimSpace(attachment.Name))
+		if name == "." || name == "" {
+			name = filepath.Base(attachment.Path)
+		}
+		name = strings.NewReplacer("\r", " ", "\n", " ").Replace(name)
+		fmt.Fprintf(&files, "\n## %s: %s\n", name, attachment.Path)
+		if image {
+			input = append(input, map[string]string{"type": "localImage", "path": attachment.Path})
+		}
+	}
+	if files.Len() > 0 {
+		if text != "" {
+			text += "\n\n"
+		}
+		text += "# Files mentioned by the user:\n" + files.String()
+	}
+	return append([]map[string]string{{"type": "text", "text": text}}, input...), nil
 }
 
 type requestError struct{ err error }
@@ -368,8 +468,18 @@ func (s *Server) LANAddr() string {
 }
 
 func (s *Server) Close(ctx context.Context) error {
+	defer s.cleanupUploads()
 	if s.listener == nil {
 		return nil
 	}
 	return s.httpServer.Shutdown(ctx)
+}
+
+func (s *Server) cleanupUploads() {
+	s.uploadMu.Lock()
+	defer s.uploadMu.Unlock()
+	for path := range s.uploads {
+		_ = os.Remove(path)
+		delete(s.uploads, path)
+	}
 }
