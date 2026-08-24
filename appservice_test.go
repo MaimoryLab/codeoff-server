@@ -22,3 +22,15 @@ func TestListenAddrSettings(t *testing.T) {
 		t.Fatal("hostname should be rejected")
 	}
 }
+
+func TestServiceStatus(t *testing.T) {
+	for _, test := range []struct {
+		installed bool
+		running   bool
+		want      string
+	}{{false, false, "未安装"}, {true, false, "停止"}, {true, true, "运行"}} {
+		if got := serviceStatus(test.installed, test.running); got != test.want {
+			t.Fatalf("service status = %q, want %q", got, test.want)
+		}
+	}
+}
