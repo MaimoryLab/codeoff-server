@@ -296,10 +296,26 @@ func TestUploadAndTurnForwardAttachments(t *testing.T) {
 	if err := json.NewDecoder(uploadResponse.Body).Decode(&uploaded); err != nil {
 		t.Fatal(err)
 	}
+	textUpload, _ := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/files?name=notes.txt", strings.NewReader("plain text"))
+	textUpload.Header.Set("Authorization", "Bearer "+exchange.Token)
+	textUploadResponse, err := http.DefaultClient.Do(textUpload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer textUploadResponse.Body.Close()
+	var uploadedText struct {
+		Path string `json:"path"`
+	}
+	if err := json.NewDecoder(textUploadResponse.Body).Decode(&uploadedText); err != nil {
+		t.Fatal(err)
+	}
 
 	body, _ := json.Marshal(map[string]any{
-		"input":       "inspect this",
-		"attachments": []map[string]string{{"name": "photo.png", "path": uploaded.Path}},
+		"input": "inspect this",
+		"attachments": []map[string]string{
+			{"name": "photo.png", "path": uploaded.Path},
+			{"name": "notes.txt", "path": uploadedText.Path},
+		},
 	})
 	request, _ := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/threads/thread-42/turns", bytes.NewReader(body))
 	request.Header.Set("Authorization", "Bearer "+exchange.Token)
@@ -316,6 +332,7 @@ func TestUploadAndTurnForwardAttachments(t *testing.T) {
 	input, inputOK := params["input"].([]map[string]string)
 	if fake.method != "turn/start" || !ok || !inputOK || len(input) != 2 ||
 		!strings.Contains(input[0]["text"], "photo.png: "+uploaded.Path) ||
+		!strings.Contains(input[0]["text"], "notes.txt: "+uploadedText.Path) ||
 		input[1]["type"] != "localImage" || input[1]["path"] != uploaded.Path {
 		t.Fatalf("method = %q, params = %#v", fake.method, fake.params)
 	}
