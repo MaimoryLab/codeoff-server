@@ -51,6 +51,19 @@ func (m *Manager) Start(ctx context.Context, executable string) (State, error) {
 	return m.startLocked(ctx, executable)
 }
 
+func (m *Manager) Toggle(ctx context.Context, executable string) (State, error) {
+	m.operationMu.Lock()
+	defer m.operationMu.Unlock()
+	if m.State().Running {
+		err := m.stopLocked()
+		return m.State(), err
+	}
+	if executable == "" {
+		return m.State(), errors.New("codex CLI is not installed")
+	}
+	return m.startLocked(ctx, executable)
+}
+
 func (m *Manager) startLocked(ctx context.Context, executable string) (State, error) {
 	if state := m.State(); state.Running || state.Starting {
 		return state, nil

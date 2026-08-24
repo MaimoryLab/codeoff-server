@@ -35,6 +35,23 @@ func NewManager() *Manager { return &Manager{} }
 func (m *Manager) Start(ctx context.Context, executable, origin string) (State, error) {
 	m.operationMu.Lock()
 	defer m.operationMu.Unlock()
+	return m.startLocked(ctx, executable, origin)
+}
+
+func (m *Manager) Toggle(ctx context.Context, executable, origin string) (State, error) {
+	m.operationMu.Lock()
+	defer m.operationMu.Unlock()
+	if m.State().Running {
+		err := m.stopLocked()
+		return m.State(), err
+	}
+	if executable == "" {
+		return m.State(), errors.New("cloudflared is not installed")
+	}
+	return m.startLocked(ctx, executable, origin)
+}
+
+func (m *Manager) startLocked(ctx context.Context, executable, origin string) (State, error) {
 	if state := m.State(); state.Running || state.Starting {
 		return state, nil
 	}
@@ -91,6 +108,10 @@ func (m *Manager) Start(ctx context.Context, executable, origin string) (State, 
 func (m *Manager) Stop() error {
 	m.operationMu.Lock()
 	defer m.operationMu.Unlock()
+	return m.stopLocked()
+}
+
+func (m *Manager) stopLocked() error {
 	m.mu.Lock()
 	cancel, command := m.cancel, m.command
 	m.cancel, m.command, m.state = nil, nil, State{}

@@ -34,3 +34,9 @@ func TestServiceStatus(t *testing.T) {
 		}
 	}
 }
+
+func TestToggleLabel(t *testing.T) {
+	if toggleLabel(false) != "启动" || toggleLabel(true) != "停止" {
+		t.Fatal("unexpected toggle labels")
+	}
+}

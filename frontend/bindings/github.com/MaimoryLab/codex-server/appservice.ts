@@ -94,6 +94,14 @@ export function StopTunnel(): $CancellablePromise<tunnel$0.State> {
     return $Call.ByID(4271753948);
 }
 
+export function ToggleAppServer(): $CancellablePromise<appserver$0.State> {
+    return $Call.ByID(4234532198);
+}
+
+export function ToggleTunnel(): $CancellablePromise<tunnel$0.State> {
+    return $Call.ByID(3506073580);
+}
+
 export function TunnelState(): $CancellablePromise<tunnel$0.State> {
     return $Call.ByID(1938411353);
 }

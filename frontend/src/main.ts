@@ -140,7 +140,7 @@ async function toggleTunnel() {
     toggleTunnelButton.disabled = true;
     message.textContent = tunnelRunning ? "Stopping tunnel..." : "Starting tunnel...";
     try {
-        const state = tunnelRunning ? await AppService.StopTunnel() : await AppService.StartTunnel();
+        const state = await AppService.ToggleTunnel();
         renderTunnel(state);
         message.textContent = state.running ? "Tunnel is online" : "Tunnel stopped";
     } catch (error) {
@@ -153,7 +153,7 @@ async function toggleAppServer() {
     toggleAppServerButton.disabled = true;
     message.textContent = appServerRunning ? "Stopping app-server..." : "Starting app-server...";
     try {
-        const state = appServerRunning ? await AppService.StopAppServer() : await AppService.StartAppServer();
+        const state = await AppService.ToggleAppServer();
         renderAppServer(state);
         message.textContent = state.running ? "App-server is running" : "App-server stopped";
     } catch (error) {

@@ -50,12 +50,19 @@ func main() {
 	})
 
 	menu := app.NewMenu()
+	var updateTrayMenu func()
 	appServerStatus := menu.Add("").SetEnabled(false)
 	appServerAddress := menu.Add("").OnClick(func(*application.Context) {
 		overview := service.Overview()
 		if overview.AppServer.Running {
 			app.Clipboard.SetText(overview.ControlAddr)
 		}
+	})
+	appServerToggle := menu.Add("").OnClick(func(*application.Context) {
+		if _, err := service.ToggleAppServer(); err != nil {
+			log.Printf("toggle app-server: %v", err)
+		}
+		updateTrayMenu()
 	})
 	menu.AddSeparator()
 	tunnelStatus := menu.Add("").SetEnabled(false)
@@ -65,17 +72,25 @@ func main() {
 			app.Clipboard.SetText(overview.Tunnel.URL)
 		}
 	})
+	tunnelToggle := menu.Add("").OnClick(func(*application.Context) {
+		if _, err := service.ToggleTunnel(); err != nil {
+			log.Printf("toggle tunnel: %v", err)
+		}
+		updateTrayMenu()
+	})
 	menu.AddSeparator()
 	menu.Add("打开控制面板").OnClick(func(*application.Context) { window.Show().Focus() })
 	menu.Add("退出").OnClick(func(*application.Context) { app.Quit() })
 	menu.AddSeparator()
 
-	updateTrayMenu := func() {
+	updateTrayMenu = func() {
 		overview := service.Overview()
 		appServerStatus.SetLabel("App-server：" + serviceStatus(overview.Environment.AppServer.Installed, overview.AppServer.Running))
 		appServerAddress.SetLabel(overview.ControlAddr).SetHidden(!overview.AppServer.Running)
+		appServerToggle.SetLabel(toggleLabel(overview.AppServer.Running)).SetEnabled(overview.Environment.AppServer.Installed && !overview.AppServer.Starting)
 		tunnelStatus.SetLabel("CF Tunnel：" + serviceStatus(overview.Environment.Cloudflared.Installed, overview.Tunnel.Running))
 		tunnelAddress.SetLabel(overview.Tunnel.URL).SetHidden(!overview.Tunnel.Running)
+		tunnelToggle.SetLabel(toggleLabel(overview.Tunnel.Running)).SetEnabled(overview.Environment.Cloudflared.Installed && !overview.Tunnel.Starting)
 	}
 	updateTrayMenu()
 
@@ -103,4 +118,11 @@ func serviceStatus(installed, running bool) string {
 		return "运行"
 	}
 	return "停止"
+}
+
+func toggleLabel(running bool) string {
+	if running {
+		return "停止"
+	}
+	return "启动"
 }

@@ -16,17 +16,18 @@ func TestManagerStartAndStop(t *testing.T) {
 		return New(clientTransport), nil
 	})
 
-	state, err := manager.Start(context.Background(), "codex")
+	state, err := manager.Toggle(context.Background(), "codex")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !state.Running || state.CodexHome != "/tmp/codex" {
 		t.Fatalf("unexpected state: %+v", state)
 	}
-	if err := manager.Stop(); err != nil {
+	state, err = manager.Toggle(context.Background(), "codex")
+	if err != nil {
 		t.Fatal(err)
 	}
-	if manager.State().Running {
+	if state.Running {
 		t.Fatal("manager still running after stop")
 	}
 }

@@ -32,14 +32,18 @@ func TestManagerQuickTunnelProcess(t *testing.T) {
 	manager := NewManager()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	state, err := manager.Start(ctx, script, "http://127.0.0.1:1234")
+	state, err := manager.Toggle(ctx, script, "http://127.0.0.1:1234")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !state.Running || state.URL != "https://demo.trycloudflare.com" {
 		t.Fatalf("unexpected state: %+v", state)
 	}
-	if err := manager.Stop(); err != nil {
+	state, err = manager.Toggle(ctx, script, "http://127.0.0.1:1234")
+	if err != nil {
 		t.Fatal(err)
+	}
+	if state.Running {
+		t.Fatal("manager still running after toggle")
 	}
 }

@@ -162,6 +162,13 @@ func (s *AppService) StopAppServer() (appserver.State, error) {
 	return s.appServer.State(), nil
 }
 
+func (s *AppService) ToggleAppServer() (appserver.State, error) {
+	status := s.RefreshStatus()
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	return s.appServer.Toggle(ctx, status.Codex.Path)
+}
+
 func (s *AppService) Shutdown() error {
 	s.controlMu.Lock()
 	defer s.controlMu.Unlock()
@@ -197,6 +204,16 @@ func (s *AppService) StopTunnel() (tunnel.State, error) {
 		return s.tunnel.State(), err
 	}
 	return s.tunnel.State(), nil
+}
+
+func (s *AppService) ToggleTunnel() (tunnel.State, error) {
+	status := s.RefreshStatus()
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	defer cancel()
+	s.mu.RLock()
+	controlURL := s.controlURL
+	s.mu.RUnlock()
+	return s.tunnel.Toggle(ctx, status.Cloudflared.Path, controlURL)
 }
 
 func (s *AppService) Status() diagnostics.Snapshot {
