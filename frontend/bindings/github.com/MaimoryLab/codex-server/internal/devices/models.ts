@@ -6,6 +6,7 @@ export interface Device {
     "name": string;
     "createdAt": string;
     "lastSeen": string;
+    "connected"?: boolean;
 }
 
 export interface Pairing {

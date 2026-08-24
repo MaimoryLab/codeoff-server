@@ -48,7 +48,7 @@ type RuntimeState = {
 
 type TunnelState = { running: boolean; starting: boolean; url?: string; error?: string };
 
-type Device = { id: string; name: string; createdAt: string; lastSeen: string };
+type Device = { id: string; name: string; createdAt: string; lastSeen: string; connected?: boolean };
 
 const tools: Record<string, HTMLElement> = {
     node: document.querySelector<HTMLElement>("#tool-node")!,
@@ -173,13 +173,18 @@ function renderDevices(devices: Device[]) {
     }
     for (const device of devices) {
         const item = document.createElement("li");
+        const info = document.createElement("div");
         const label = document.createElement("span");
-        label.textContent = `${device.name} · ${new Date(device.lastSeen).toLocaleString()}`;
+        label.textContent = device.name;
+        const status = document.createElement("span");
+        status.className = `device-state ${device.connected ? "online" : "offline"}`;
+        status.textContent = `${device.connected ? "Connected" : "Offline"} · ${new Date(device.lastSeen).toLocaleString()}`;
+        info.append(label, status);
         const revoke = document.createElement("button");
         revoke.className = "mini-button";
         revoke.textContent = "Revoke";
         revoke.addEventListener("click", () => void revokeDevice(device.id));
-        item.append(label, revoke);
+        item.append(info, revoke);
         deviceList.append(item);
     }
 }

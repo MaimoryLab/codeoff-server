@@ -500,10 +500,13 @@ func authenticate(store *devices.Store, next http.Handler) http.Handler {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
-		if _, ok := store.Authenticate(token); !ok {
+		device, ok := store.Authenticate(token)
+		if !ok {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
+		disconnect := store.Connect(device.ID)
+		defer disconnect()
 		next.ServeHTTP(w, r)
 	})
 }

@@ -33,6 +33,14 @@ func TestPairExchangeAuthenticateAndRevoke(t *testing.T) {
 	if authenticated, ok := store.Authenticate(token); !ok || authenticated.ID != device.ID {
 		t.Fatalf("authentication failed: %+v, %v", authenticated, ok)
 	}
+	disconnect := store.Connect(device.ID)
+	if devices := store.List(); len(devices) != 1 || !devices[0].Connected {
+		t.Fatalf("connected devices = %+v", devices)
+	}
+	disconnect()
+	if store.List()[0].Connected {
+		t.Fatal("disconnected device is still connected")
+	}
 	if err := store.Revoke(device.ID); err != nil {
 		t.Fatal(err)
 	}

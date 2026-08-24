@@ -46,4 +46,9 @@ h2 { margin-bottom: 8px; font-size: 22px; }
 #pairing-expiry { margin: 0; font-size: 12px; }
 .device-list { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
 .device-list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #252a33; padding: 0 0 10px; font-size: 13px; }
+.device-list li > div { display: grid; gap: 5px; min-width: 0; }
+.device-state { display: flex; align-items: center; gap: 6px; color: #8d97a6; font-size: 11px; }
+.device-state::before { width: 7px; height: 7px; border-radius: 50%; background: #697383; content: ""; }
+.device-state.online { color: #83d39b; }
+.device-state.online::before { background: #83d39b; }
 @media (max-width: 720px) { .shell { width: min(100% - 32px, 920px); padding-top: 32px; } .topbar { gap: 18px; } .dashboard { grid-template-columns: 1fr; } .dashboard:not(.ready) .environment-card { grid-column: auto; } .panel-heading { gap: 12px; } .service-action { align-items: flex-end; flex-direction: column; gap: 8px; } .listen-settings { grid-template-columns: minmax(0, 1fr) 90px; } .listen-settings button { grid-column: 1 / -1; } }

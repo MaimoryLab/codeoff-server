@@ -22,6 +22,7 @@ type Device struct {
 	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"createdAt"`
 	LastSeen  time.Time `json:"lastSeen"`
+	Connected bool      `json:"connected,omitempty"`
 }
 
 type Pairing struct {
@@ -41,10 +42,11 @@ type Store struct {
 	pairingHash [sha256.Size]byte
 	pairingEnd  time.Time
 	now         func() time.Time
+	connections map[string]int
 }
 
 func Open(path string) (*Store, error) {
-	store := &Store{path: path, now: time.Now}
+	store := &Store{path: path, now: time.Now, connections: make(map[string]int)}
 	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return store, nil
@@ -137,8 +139,24 @@ func (s *Store) List() []Device {
 	result := make([]Device, len(s.devices))
 	for index := range s.devices {
 		result[index] = s.devices[index].Device
+		result[index].Connected = s.connections[result[index].ID] > 0
 	}
 	return result
+}
+
+func (s *Store) Connect(id string) func() {
+	s.mu.Lock()
+	s.connections[id]++
+	s.mu.Unlock()
+	return func() {
+		s.mu.Lock()
+		if s.connections[id] <= 1 {
+			delete(s.connections, id)
+		} else {
+			s.connections[id]--
+		}
+		s.mu.Unlock()
+	}
 }
 
 func (s *Store) Revoke(id string) error {
@@ -153,6 +171,7 @@ func (s *Store) Revoke(id string) error {
 		s.devices = before
 		return err
 	}
+	delete(s.connections, id)
 	return nil
 }
 
