@@ -24,7 +24,6 @@ wails3 dev
 The current desktop panel checks `node`, `codex`, `codex app-server`, and `cloudflared`. It can install Node.js through the available platform package manager (Homebrew, winget, or apt), Codex through npm, and Cloudflared through Homebrew or winget after an explicit button click. The local control API binds to an ephemeral port on all IPv4 interfaces; startup logs print the port for LAN clients, and the API exposes:
 
 ```text
-GET /healthz
 POST /api/v1/pair/exchange
 GET /api/v1/ws
 ```

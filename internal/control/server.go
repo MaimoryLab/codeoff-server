@@ -63,10 +63,6 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 	}
 	mux := http.NewServeMux()
 	apiMux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok\n"))
-	})
 	mux.HandleFunc("POST /api/v1/pair/exchange", func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
 			Token string `json:"token"`
