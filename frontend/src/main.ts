@@ -82,7 +82,7 @@ function render(snapshot: Snapshot) {
     renderTool(tools.cloudflared, snapshot.cloudflared);
     dashboard.classList.toggle("ready", snapshot.node.installed && snapshot.codex.installed);
     installNodeButton.disabled = false;
-    installNodeButton.textContent = snapshot.node.installed ? "Upgrade" : "Install";
+    installNodeButton.hidden = snapshot.node.installed;
     installCodexButton.disabled = false;
     installCodexButton.textContent = snapshot.codex.installed ? "Upgrade" : "Install";
     installCloudflaredButton.disabled = false;
