@@ -12,7 +12,7 @@
         <div><p class="eyebrow">LOCAL CONTROL</p><h1>Codex Remote</h1></div>
         <button id="refresh" class="button" type="button">Refresh</button>
     </header>
-    <p id="message" class="notice muted"></p>
+    <div id="message" class="notice" role="status" aria-live="polite" aria-atomic="true" hidden><span id="message-text"></span><button id="copy-message" class="mini-button" type="button" hidden>Copy</button></div>
     <div id="dashboard" class="dashboard">
         <section class="panel installed-only" aria-labelledby="app-server-title">
             <div class="panel-heading"><div><p class="eyebrow">RUNTIME</p><h2 id="app-server-title">Codex app-server</h2></div><div class="service-action"><strong id="app-server-state" class="state-offline">Offline</strong><button id="toggle-app-server" class="button secondary" type="button">Start</button></div></div>

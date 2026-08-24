@@ -5,6 +5,8 @@ import {Clipboard} from "@wailsio/runtime";
 const checkedAt = document.querySelector<HTMLElement>("#checked-at")!;
 const platform = document.querySelector<HTMLElement>("#platform")!;
 const message = document.querySelector<HTMLElement>("#message")!;
+const messageText = document.querySelector<HTMLElement>("#message-text")!;
+const copyMessageButton = document.querySelector<HTMLButtonElement>("#copy-message")!;
 const refreshButton = document.querySelector<HTMLButtonElement>("#refresh")!;
 const installNodeButton = document.querySelector<HTMLButtonElement>("#install-node")!;
 const installCodexButton = document.querySelector<HTMLButtonElement>("#install-codex")!;
@@ -37,6 +39,7 @@ let cloudflaredInstalled = false;
 let pairingToken = "";
 let pairingExpiresAt = "";
 let controlAddr = "";
+let toastTimer = 0;
 
 type RuntimeState = {
     running: boolean;
@@ -62,6 +65,15 @@ function renderTool(element: HTMLElement, tool: ToolStatus) {
     element.textContent = tool.installed ? tool.version || "Installed" : tool.error || "Not installed";
 }
 
+function showToast(text: string, error = false) {
+    window.clearTimeout(toastTimer);
+    message.hidden = !text;
+    message.classList.toggle("error", error);
+    messageText.textContent = text;
+    copyMessageButton.hidden = !error;
+    if (text) toastTimer = window.setTimeout(() => { message.hidden = true; }, error ? 10000 : 5000);
+}
+
 function render(snapshot: Snapshot) {
     platform.textContent = `${snapshot.platform} / ${snapshot.architecture}`;
     checkedAt.textContent = `Checked ${new Date(snapshot.checkedAt).toLocaleTimeString()}`;
@@ -76,7 +88,7 @@ function render(snapshot: Snapshot) {
     installCloudflaredButton.disabled = false;
     installCloudflaredButton.textContent = snapshot.cloudflared.installed ? "Upgrade" : "Install";
     cloudflaredInstalled = snapshot.cloudflared.installed;
-    message.textContent = "";
+    showToast("");
 }
 
 function renderAppServer(state: RuntimeState, address = controlAddr) {
@@ -119,7 +131,7 @@ function hidePairingCode() {
 
 async function refresh() {
     refreshButton.disabled = true;
-    message.textContent = "Checking local environment...";
+    showToast("Checking local environment...");
     try {
         const [environment, overview] = await Promise.all([AppService.RefreshStatus(), AppService.Overview()]);
         controlAddr = overview.controlAddr || "";
@@ -129,7 +141,7 @@ async function refresh() {
         renderTunnel(overview.tunnel);
         await refreshDevices();
     } catch (error) {
-        message.textContent = error instanceof Error ? error.message : "Unable to check environment";
+        showToast(error instanceof Error ? error.message : "Unable to check environment", true);
     } finally {
         refreshButton.disabled = false;
     }
@@ -137,26 +149,26 @@ async function refresh() {
 
 async function toggleTunnel() {
     toggleTunnelButton.disabled = true;
-    message.textContent = tunnelRunning ? "Stopping tunnel..." : "Starting tunnel...";
+    showToast(tunnelRunning ? "Stopping tunnel..." : "Starting tunnel...");
     try {
         const state = await AppService.ToggleTunnel();
         renderTunnel(state);
-        message.textContent = state.running ? "Tunnel is online" : "Tunnel stopped";
+        showToast(state.running ? "Tunnel is online" : "Tunnel stopped");
     } catch (error) {
-        message.textContent = error instanceof Error ? error.message : "Unable to change tunnel state";
+        showToast(error instanceof Error ? error.message : "Unable to change tunnel state", true);
         renderTunnel(await AppService.TunnelState());
     }
 }
 
 async function toggleAppServer() {
     toggleAppServerButton.disabled = true;
-    message.textContent = appServerRunning ? "Stopping app-server..." : "Starting app-server...";
+    showToast(appServerRunning ? "Stopping app-server..." : "Starting app-server...");
     try {
         const state = await AppService.ToggleAppServer();
         renderAppServer(state);
-        message.textContent = state.running ? "App-server is running" : "App-server stopped";
+        showToast(state.running ? "App-server is running" : "App-server stopped");
     } catch (error) {
-        message.textContent = error instanceof Error ? error.message : "Unable to change app-server state";
+        showToast(error instanceof Error ? error.message : "Unable to change app-server state", true);
         renderAppServer(await AppService.AppServerState());
     }
 }
@@ -194,7 +206,7 @@ async function refreshDevices() {
         renderDevices(devices ?? []);
         if (pairingToken && !pairingActive) hidePairingCode();
     } catch (error) {
-        message.textContent = error instanceof Error ? error.message : "Unable to load devices";
+        showToast(error instanceof Error ? error.message : "Unable to load devices", true);
     }
 }
 
@@ -207,7 +219,7 @@ async function bindDevice() {
         pairingCode.hidden = false;
         updatePairingCode();
     } catch (error) {
-        message.textContent = error instanceof Error ? error.message : "Unable to create pairing code";
+        showToast(error instanceof Error ? error.message : "Unable to create pairing code", true);
     } finally {
         bindDeviceButton.disabled = false;
     }
@@ -221,9 +233,9 @@ async function copyText(value: string, label: string) {
     if (!value) return;
     try {
         await Clipboard.SetText(value);
-        message.textContent = `${label} copied`;
+        showToast(`${label} copied`);
     } catch (error) {
-        message.textContent = error instanceof Error ? error.message : `Unable to copy ${label.toLowerCase()}`;
+        showToast(error instanceof Error ? error.message : `Unable to copy ${label.toLowerCase()}`, true);
     }
 }
 
@@ -237,16 +249,16 @@ function renderListenAddr(address: string) {
 async function saveListenAddr() {
     if (!listenHost.reportValidity() || !listenPort.reportValidity()) return;
     saveListenButton.disabled = true;
-    message.textContent = "Restarting local server...";
+    showToast("Restarting local server...");
     try {
         const overview = await AppService.SetListenAddr(`${listenHost.value.trim()}:${listenPort.value}`);
         controlAddr = overview.controlAddr || "";
         renderListenAddr(overview.listenAddr);
         renderAppServer(overview.appServer);
         renderTunnel(overview.tunnel);
-        message.textContent = "Local server restarted";
+        showToast("Local server restarted");
     } catch (error) {
-        message.textContent = error instanceof Error ? error.message : "Unable to update listen address";
+        showToast(error instanceof Error ? error.message : "Unable to update listen address", true);
     } finally {
         saveListenButton.disabled = false;
     }
@@ -257,7 +269,7 @@ async function revokeDevice(id: string) {
         await AppService.RevokeDevice(id);
         await refreshDevices();
     } catch (error) {
-        message.textContent = error instanceof Error ? error.message : "Unable to revoke device";
+        showToast(error instanceof Error ? error.message : "Unable to revoke device", true);
     }
 }
 
@@ -265,13 +277,13 @@ async function install(kind: "node" | "codex" | "cloudflared") {
     const button = kind === "node" ? installNodeButton : kind === "codex" ? installCodexButton : installCloudflaredButton;
     button.disabled = true;
     const label = kind === "node" ? "Node.js" : kind === "codex" ? "Codex CLI" : "Cloudflared";
-    message.textContent = `${button.textContent === "Upgrade" ? "Upgrading" : "Installing"} ${label}...`;
+    showToast(`${button.textContent === "Upgrade" ? "Upgrading" : "Installing"} ${label}...`);
     try {
         const result = kind === "node" ? await AppService.InstallNode() : kind === "codex" ? await AppService.InstallCodex() : await AppService.InstallCloudflared();
         render(result);
         renderTunnel(await AppService.TunnelState());
     } catch (error) {
-        message.textContent = error instanceof Error ? error.message : "Installation failed";
+        showToast(error instanceof Error ? error.message : "Installation failed", true);
         button.disabled = false;
     }
 }
@@ -284,6 +296,7 @@ toggleAppServerButton.addEventListener("click", () => void toggleAppServer());
 toggleTunnelButton.addEventListener("click", () => void toggleTunnel());
 bindDeviceButton.addEventListener("click", () => void bindDevice());
 copyPairingButton.addEventListener("click", () => void copyPairingCode());
+copyMessageButton.addEventListener("click", () => void copyText(messageText.textContent ?? "", "Error"));
 copyAppServerButton.addEventListener("click", () => void copyText(controlAddr, "Local address"));
 copyTunnelButton.addEventListener("click", () => void copyText(tunnelURL, "Cloudflare address"));
 saveListenButton.addEventListener("click", () => void saveListenAddr());

@@ -13,8 +13,10 @@ h2 { margin-bottom: 8px; font-size: 19px; }
 .button:disabled { cursor: wait; opacity: .55; }
 .secondary { background: transparent; border: 1px solid #3a414e; color: #e9edf2; }
 .secondary:disabled { cursor: not-allowed; }
-.notice { margin: 12px 0; font-size: 13px; }
-.notice:empty { display: none; }
+.notice { position: fixed; top: 16px; left: 50%; z-index: 100; display: flex; align-items: center; gap: 12px; max-width: min(560px, calc(100% - 48px)); border: 1px solid #3a414e; border-radius: 6px; background: #20242c; box-shadow: 0 8px 24px rgb(0 0 0 / 30%); color: #d9dee6; font-size: 13px; padding: 10px 12px; transform: translateX(-50%); }
+.notice span { min-width: 0; overflow-wrap: anywhere; }
+.notice.error { border-color: #7a3e43; color: #f2b4b4; }
+.notice[hidden] { display: none; }
 .muted, .meta span { color: #8d97a6; }
 .meta { display: grid; gap: 6px; text-align: right; font-size: 13px; }
 .meta strong { color: #d9dee6; font-size: 14px; }
