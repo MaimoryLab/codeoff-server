@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"sync"
 	"time"
@@ -29,6 +30,7 @@ type Manager struct {
 	events      chan Event
 	start       startClient
 	executable  string
+	terminate   func(context.Context, string, string) error
 }
 
 func NewManager() *Manager {
@@ -36,7 +38,11 @@ func NewManager() *Manager {
 }
 
 func newManager(start startClient) *Manager {
-	return &Manager{events: make(chan Event, 256), start: start}
+	return &Manager{
+		events:    make(chan Event, 256),
+		start:     start,
+		terminate: terminateThreadOwner,
+	}
 }
 
 func (m *Manager) Start(ctx context.Context, executable string) (State, error) {
@@ -150,6 +156,55 @@ func (m *Manager) ReleaseThread(ctx context.Context, threadID string) (bool, err
 	stopErr := m.stopLocked()
 	_, startErr := m.startLocked(ctx, executable)
 	return startErr == nil, errors.Join(stopErr, startErr)
+}
+
+func (m *Manager) TakeOverThread(ctx context.Context, threadID string) (json.RawMessage, error) {
+	m.operationMu.Lock()
+	defer m.operationMu.Unlock()
+	m.mu.RLock()
+	client, codexHome := m.client, m.state.CodexHome
+	m.mu.RUnlock()
+	if client == nil {
+		return nil, errors.New("app-server is not running")
+	}
+
+	params := map[string]string{"threadId": threadID}
+	result, err := resumeThread(ctx, client, params)
+	if err == nil || !isWriterConflict(err) {
+		return result, err
+	}
+	takeoverCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	if err := m.terminate(takeoverCtx, codexHome, threadID); err != nil {
+		return nil, err
+	}
+
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		result, err = resumeThread(takeoverCtx, client, params)
+		if err == nil || !isWriterConflict(err) {
+			return result, err
+		}
+		select {
+		case <-takeoverCtx.Done():
+			return nil, fmt.Errorf("waiting to take over thread: %w", takeoverCtx.Err())
+		case <-ticker.C:
+		}
+	}
+}
+
+func resumeThread(ctx context.Context, client *Client, params any) (json.RawMessage, error) {
+	var result json.RawMessage
+	if err := client.Call(ctx, "thread/resume", params, &result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func isWriterConflict(err error) bool {
+	rpcError, ok := errors.AsType[*RPCError](err)
+	return ok && rpcError.Code == -32600
 }
 
 func hasActiveThreads(ctx context.Context, client *Client) (bool, error) {
