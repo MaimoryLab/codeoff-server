@@ -84,12 +84,24 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 		}
 		writeJSON(w, struct {
 			Device devices.Device `json:"device"`
+			Server devices.Server `json:"server"`
 			Token  string         `json:"token"`
-		}{device, token})
+		}{device, deviceStore.Server(), token})
 	})
 	mux.Handle("GET /api/v1/status", authenticate(deviceStore, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(status(r.Context())); err != nil {
+		value, err := json.Marshal(status(r.Context()))
+		if err != nil {
+			http.Error(w, "encode status: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		var payload map[string]any
+		if err := json.Unmarshal(value, &payload); err != nil {
+			http.Error(w, "encode status: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		payload["server"] = deviceStore.Server()
+		if err := json.NewEncoder(w).Encode(payload); err != nil {
 			http.Error(w, "encode status: "+err.Error(), http.StatusInternalServerError)
 		}
 	})))

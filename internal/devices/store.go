@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -23,6 +24,11 @@ type Device struct {
 	CreatedAt time.Time `json:"createdAt"`
 	LastSeen  time.Time `json:"lastSeen"`
 	Connected bool      `json:"connected,omitempty"`
+}
+
+type Server struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type Pairing struct {
@@ -43,21 +49,85 @@ type Store struct {
 	pairingEnd  time.Time
 	now         func() time.Time
 	connections map[string]int
+	server      Server
+}
+
+type persisted struct {
+	Devices []record `json:"devices"`
+	Server  Server   `json:"server"`
 }
 
 func Open(path string) (*Store, error) {
 	store := &Store{path: path, now: time.Now, connections: make(map[string]int)}
 	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return store, nil
+		return store.initServer()
 	}
 	if err != nil {
 		return nil, err
 	}
+	var saved persisted
+	if err := json.Unmarshal(data, &saved); err == nil && saved.Server.ID != "" {
+		store.devices, store.server = saved.Devices, saved.Server
+		return store, nil
+	}
 	if err := json.Unmarshal(data, &store.devices); err != nil {
 		return nil, err
 	}
-	return store, nil
+	return store.initServer()
+}
+
+func (s *Store) initServer() (*Store, error) {
+	id, err := randomUUID()
+	if err != nil {
+		return nil, err
+	}
+	name, err := os.Hostname()
+	if err != nil || name == "" {
+		name = "Codex Remote"
+	}
+	s.server = Server{ID: id, Name: name}
+	if err := s.saveLocked(); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+func (s *Store) Server() Server {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.server
+}
+
+func (s *Store) saveLocked() error {
+	if err := os.MkdirAll(filepath.Dir(s.path), 0o700); err != nil {
+		return err
+	}
+	data, err := json.MarshalIndent(persisted{Devices: s.devices, Server: s.server}, "", "  ")
+	if err != nil {
+		return err
+	}
+	temporary, err := os.CreateTemp(filepath.Dir(s.path), "devices-*.json")
+	if err != nil {
+		return err
+	}
+	temporaryName := temporary.Name()
+	defer os.Remove(temporaryName)
+	if err := temporary.Chmod(0o600); err != nil {
+		temporary.Close()
+		return err
+	}
+	if _, err := temporary.Write(data); err != nil {
+		temporary.Close()
+		return err
+	}
+	if err := temporary.Close(); err != nil {
+		return err
+	}
+	if runtime.GOOS == "windows" {
+		_ = os.Remove(s.path)
+	}
+	return os.Rename(temporaryName, s.path)
 }
 
 func DefaultPath() (string, error) {
@@ -172,42 +242,20 @@ func (s *Store) Revoke(id string) error {
 	return nil
 }
 
-func (s *Store) saveLocked() error {
-	if err := os.MkdirAll(filepath.Dir(s.path), 0o700); err != nil {
-		return err
-	}
-	data, err := json.MarshalIndent(s.devices, "", "  ")
-	if err != nil {
-		return err
-	}
-	temporary, err := os.CreateTemp(filepath.Dir(s.path), "devices-*.json")
-	if err != nil {
-		return err
-	}
-	temporaryName := temporary.Name()
-	defer os.Remove(temporaryName)
-	if err := temporary.Chmod(0o600); err != nil {
-		temporary.Close()
-		return err
-	}
-	if _, err := temporary.Write(data); err != nil {
-		temporary.Close()
-		return err
-	}
-	if err := temporary.Close(); err != nil {
-		return err
-	}
-	if runtime.GOOS == "windows" {
-		// ponytail: Windows cannot atomically replace the target; use ReplaceFile if crash recovery matters.
-		_ = os.Remove(s.path)
-	}
-	return os.Rename(temporaryName, s.path)
-}
-
 func randomToken(size int) (string, error) {
 	buffer := make([]byte, size)
 	if _, err := rand.Read(buffer); err != nil {
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(buffer), nil
+}
+
+func randomUUID() (string, error) {
+	buffer := make([]byte, 16)
+	if _, err := rand.Read(buffer); err != nil {
+		return "", err
+	}
+	buffer[6] = (buffer[6] & 0x0f) | 0x40
+	buffer[8] = (buffer[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x", buffer[:4], buffer[4:6], buffer[6:8], buffer[8:10], buffer[10:]), nil
 }
