@@ -28,11 +28,17 @@ type Server struct {
 }
 
 type turnRequest struct {
-	Input       string `json:"input"`
-	Attachments []struct {
+	Input          string         `json:"input"`
+	ApprovalPolicy string         `json:"approvalPolicy"`
+	SandboxPolicy  *sandboxPolicy `json:"sandboxPolicy"`
+	Attachments    []struct {
 		Name string `json:"name"`
 		Path string `json:"path"`
 	} `json:"attachments"`
+}
+
+type sandboxPolicy struct {
+	Type string `json:"type"`
 }
 
 type AppServer interface {
@@ -145,10 +151,14 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 		if err != nil {
 			return requestError{err}
 		}
-		return map[string]any{
+		params := map[string]any{
 			"threadId": r.PathValue("threadID"),
 			"input":    input,
 		}
+		if err := request.addPermissions(params); err != nil {
+			return requestError{err}
+		}
+		return params
 	})))
 	mux.Handle("POST /api/v1/turns/{turnID}/steer", authenticate(deviceStore, callAppServer(appServer, "turn/steer", func(r *http.Request) any {
 		var request turnRequest
@@ -176,6 +186,24 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 	mux.Handle("GET /api/v1/events", authenticate(deviceStore, eventsStream(appServer, events)))
 	server.httpServer = &http.Server{Handler: mux}
 	return server
+}
+
+func (r turnRequest) addPermissions(params map[string]any) error {
+	if r.ApprovalPolicy == "" && r.SandboxPolicy == nil {
+		return nil
+	}
+	if r.ApprovalPolicy == "" || r.SandboxPolicy == nil {
+		return errors.New("approvalPolicy and sandboxPolicy are required together")
+	}
+	if r.ApprovalPolicy != "on-request" && r.ApprovalPolicy != "never" {
+		return errors.New("invalid approvalPolicy")
+	}
+	if r.SandboxPolicy.Type != "workspaceWrite" && r.SandboxPolicy.Type != "dangerFullAccess" {
+		return errors.New("invalid sandboxPolicy")
+	}
+	params["approvalPolicy"] = r.ApprovalPolicy
+	params["sandboxPolicy"] = r.SandboxPolicy
+	return nil
 }
 
 func resumeThread(appServer AppServer) http.Handler {

@@ -424,7 +424,9 @@ func TestUploadAndTurnForwardAttachments(t *testing.T) {
 	}
 
 	body, _ := json.Marshal(map[string]any{
-		"input": "inspect this",
+		"input":          "inspect this",
+		"approvalPolicy": "on-request",
+		"sandboxPolicy":  map[string]string{"type": "workspaceWrite"},
 		"attachments": []map[string]string{
 			{"name": "photo.png", "path": uploaded.Path},
 			{"name": "notes.txt", "path": uploadedText.Path},
@@ -443,11 +445,25 @@ func TestUploadAndTurnForwardAttachments(t *testing.T) {
 	}
 	params, ok := fake.params.(map[string]any)
 	input, inputOK := params["input"].([]map[string]string)
+	sandbox, sandboxOK := params["sandboxPolicy"].(*sandboxPolicy)
 	if fake.method != "turn/start" || !ok || !inputOK || len(input) != 2 ||
+		params["approvalPolicy"] != "on-request" || !sandboxOK || sandbox.Type != "workspaceWrite" ||
 		!strings.Contains(input[0]["text"], "photo.png: "+uploaded.Path) ||
 		!strings.Contains(input[0]["text"], "notes.txt: "+uploadedText.Path) ||
 		input[1]["type"] != "localImage" || input[1]["path"] != uploaded.Path {
 		t.Fatalf("method = %q, params = %#v", fake.method, fake.params)
+	}
+}
+
+func TestTurnPermissionsValidation(t *testing.T) {
+	for _, request := range []turnRequest{
+		{ApprovalPolicy: "never"},
+		{ApprovalPolicy: "always", SandboxPolicy: &sandboxPolicy{Type: "workspaceWrite"}},
+		{ApprovalPolicy: "never", SandboxPolicy: &sandboxPolicy{Type: "hostWrite"}},
+	} {
+		if err := request.addPermissions(map[string]any{}); err == nil {
+			t.Fatalf("permissions accepted: %#v", request)
+		}
 	}
 }
 
