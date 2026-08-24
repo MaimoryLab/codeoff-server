@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/MaimoryLab/codex-server/internal/appserver"
@@ -246,6 +247,76 @@ func TestSteerTurnForwardsActiveTurn(t *testing.T) {
 	params, ok := fake.params.(map[string]any)
 	input, inputOK := params["input"].([]map[string]string)
 	if fake.method != "turn/steer" || !ok || !inputOK || params["threadId"] != "thread-42" || params["expectedTurnId"] != "turn-7" || len(input) != 1 || input[0]["text"] != "continue" {
+		t.Fatalf("method = %q, params = %#v", fake.method, fake.params)
+	}
+}
+
+func TestUploadAndTurnForwardAttachments(t *testing.T) {
+	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pairing, err := store.NewPairing()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fake := new(fakeApprovalServer)
+	server := New(func(context.Context) diagnostics.Snapshot { return diagnostics.Snapshot{} }, store, fake)
+	t.Cleanup(server.cleanupUploads)
+	httpServer := httptest.NewServer(server.httpServer.Handler)
+	t.Cleanup(httpServer.Close)
+
+	pairBody, _ := json.Marshal(map[string]string{"token": pairing.Token, "name": "Phone"})
+	pairResponse, err := http.Post(httpServer.URL+"/api/v1/pair/exchange", "application/json", bytes.NewReader(pairBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pairResponse.Body.Close()
+	var exchange struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(pairResponse.Body).Decode(&exchange); err != nil {
+		t.Fatal(err)
+	}
+
+	png := []byte("\x89PNG\r\n\x1a\nmobile image")
+	upload, _ := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/files?name=photo.png", bytes.NewReader(png))
+	upload.Header.Set("Authorization", "Bearer "+exchange.Token)
+	uploadResponse, err := http.DefaultClient.Do(upload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer uploadResponse.Body.Close()
+	if uploadResponse.StatusCode != http.StatusOK {
+		t.Fatalf("upload status = %d", uploadResponse.StatusCode)
+	}
+	var uploaded struct {
+		Path string `json:"path"`
+	}
+	if err := json.NewDecoder(uploadResponse.Body).Decode(&uploaded); err != nil {
+		t.Fatal(err)
+	}
+
+	body, _ := json.Marshal(map[string]any{
+		"input":       "inspect this",
+		"attachments": []map[string]string{{"name": "photo.png", "path": uploaded.Path}},
+	})
+	request, _ := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/threads/thread-42/turns", bytes.NewReader(body))
+	request.Header.Set("Authorization", "Bearer "+exchange.Token)
+	request.Header.Set("Content-Type", "application/json")
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("turn status = %d", response.StatusCode)
+	}
+	params, ok := fake.params.(map[string]any)
+	input, inputOK := params["input"].([]map[string]string)
+	if fake.method != "turn/start" || !ok || !inputOK || len(input) != 2 ||
+		!strings.Contains(input[0]["text"], "photo.png: "+uploaded.Path) ||
+		input[1]["type"] != "localImage" || input[1]["path"] != uploaded.Path {
 		t.Fatalf("method = %q, params = %#v", fake.method, fake.params)
 	}
 }
