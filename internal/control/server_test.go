@@ -137,7 +137,7 @@ func TestApprovalResponseRequiresAuthAndForwardsDecision(t *testing.T) {
 	}
 }
 
-func TestResumeThreadForwardsThreadID(t *testing.T) {
+func TestThreadActionsForwardThreadID(t *testing.T) {
 	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
 	if err != nil {
 		t.Fatal(err)
@@ -164,23 +164,27 @@ func TestResumeThreadForwardsThreadID(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	request, _ := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/threads/thread-42/resume", bytes.NewReader([]byte(`{}`)))
-	request.Header.Set("Authorization", "Bearer "+exchange.Token)
-	request.Header.Set("Content-Type", "application/json")
-	response, err := http.DefaultClient.Do(request)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer response.Body.Close()
-	if response.StatusCode != http.StatusOK {
-		t.Fatalf("resume status = %d", response.StatusCode)
-	}
-	if fake.method != "thread/resume" {
-		t.Fatalf("method = %q", fake.method)
-	}
-	params, ok := fake.params.(map[string]string)
-	if !ok || params["threadId"] != "thread-42" {
-		t.Fatalf("params = %#v", fake.params)
+	for _, action := range []string{"resume", "unsubscribe"} {
+		t.Run(action, func(t *testing.T) {
+			request, _ := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/threads/thread-42/"+action, bytes.NewReader([]byte(`{}`)))
+			request.Header.Set("Authorization", "Bearer "+exchange.Token)
+			request.Header.Set("Content-Type", "application/json")
+			response, err := http.DefaultClient.Do(request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer response.Body.Close()
+			if response.StatusCode != http.StatusOK {
+				t.Fatalf("status = %d", response.StatusCode)
+			}
+			if fake.method != "thread/"+action {
+				t.Fatalf("method = %q", fake.method)
+			}
+			params, ok := fake.params.(map[string]string)
+			if !ok || params["threadId"] != "thread-42" {
+				t.Fatalf("params = %#v", fake.params)
+			}
+		})
 	}
 }
 

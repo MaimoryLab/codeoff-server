@@ -96,6 +96,9 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 	mux.Handle("POST /api/v1/threads/{threadID}/resume", authenticate(deviceStore, callAppServer(appServer, "thread/resume", func(r *http.Request) any {
 		return map[string]string{"threadId": r.PathValue("threadID")}
 	})))
+	mux.Handle("POST /api/v1/threads/{threadID}/unsubscribe", authenticate(deviceStore, callAppServer(appServer, "thread/unsubscribe", func(r *http.Request) any {
+		return map[string]string{"threadId": r.PathValue("threadID")}
+	})))
 	mux.Handle("POST /api/v1/threads/{threadID}/turns", authenticate(deviceStore, callAppServer(appServer, "turn/start", func(r *http.Request) any {
 		var request struct {
 			Input string `json:"input"`
