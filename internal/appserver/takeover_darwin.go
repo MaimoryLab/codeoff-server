@@ -22,18 +22,13 @@ func terminateThreadOwner(ctx context.Context, codexHome, threadID string) error
 	if !validThreadID(threadID) {
 		return errors.New("invalid thread id")
 	}
+	if !filepath.IsAbs(codexHome) {
+		return errors.New("invalid codex home")
+	}
 	lockPath := filepath.Join(codexHome, "thread-writer-locks", threadID+".lock")
-	output, err := exec.CommandContext(ctx, "/usr/sbin/lsof", "-t", "--", lockPath).Output()
+	pid, err := threadOwnerPID(ctx, lockPath)
 	if err != nil {
-		return fmt.Errorf("find thread owner: %w", err)
-	}
-	lines := strings.Fields(string(output))
-	if len(lines) != 1 {
-		return fmt.Errorf("expected one thread owner, found %d", len(lines))
-	}
-	pid, err := strconv.Atoi(lines[0])
-	if err != nil || pid < 2 {
-		return errors.New("invalid thread owner pid")
+		return err
 	}
 
 	owner, err := inspectProcess(ctx, pid)
@@ -53,6 +48,10 @@ func terminateThreadOwner(ctx context.Context, codexHome, threadID string) error
 			target = parent
 		}
 	}
+	currentPID, err := threadOwnerPID(ctx, lockPath)
+	if err != nil || currentPID != owner.pid {
+		return errors.New("thread owner changed; retry takeover")
+	}
 	if target.pid == os.Getpid() {
 		return errors.New("refusing to terminate codex-server")
 	}
@@ -64,6 +63,22 @@ func terminateThreadOwner(ctx context.Context, codexHome, threadID string) error
 		return fmt.Errorf("terminate thread owner: %w", err)
 	}
 	return nil
+}
+
+func threadOwnerPID(ctx context.Context, lockPath string) (int, error) {
+	output, err := exec.CommandContext(ctx, "/usr/sbin/lsof", "-t", "--", lockPath).Output()
+	if err != nil {
+		return 0, fmt.Errorf("find thread owner: %w", err)
+	}
+	lines := strings.Fields(string(output))
+	if len(lines) != 1 {
+		return 0, fmt.Errorf("expected one thread owner, found %d", len(lines))
+	}
+	pid, err := strconv.Atoi(lines[0])
+	if err != nil || pid < 2 {
+		return 0, errors.New("invalid thread owner pid")
+	}
+	return pid, nil
 }
 
 func inspectProcess(ctx context.Context, pid int) (processInfo, error) {

@@ -1,6 +1,9 @@
 package appserver
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 func TestTakeoverValidation(t *testing.T) {
 	const threadID = "01a03232-664d-7223-8fe8-595cbb1ed353"
@@ -21,5 +24,8 @@ func TestTakeoverValidation(t *testing.T) {
 	}
 	if got := appBundle("/usr/local/bin/codex"); got != "" {
 		t.Fatalf("CLI app bundle = %q", got)
+	}
+	if err := terminateThreadOwner(context.Background(), "relative", threadID); err == nil {
+		t.Fatal("relative codex home accepted")
 	}
 }
