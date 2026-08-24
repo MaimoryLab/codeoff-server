@@ -25,18 +25,11 @@ The current desktop panel checks `node`, `codex`, `codex app-server`, and `cloud
 
 ```text
 GET /healthz
-GET /api/v1/status
-GET /api/v1/directories?path=/path/on/server
 POST /api/v1/pair/exchange
-GET /api/v1/threads
-POST /api/v1/threads
-POST /api/v1/threads/:threadID/turns
-POST /api/v1/turns/:turnID/interrupt?threadId=:threadID
-POST /api/v1/approvals/:requestID
-GET /api/v1/events
+GET /api/v1/ws
 ```
 
-Pair exchange is the only public API route. All other `/api/v1` routes require a device `Bearer` token.
+Pair exchange is the only HTTP API. All authenticated requests and server events share the `/api/v1/ws` WebSocket session and use request IDs for responses. The WebSocket handshake requires a device `Bearer` token.
 
 ## Build
 

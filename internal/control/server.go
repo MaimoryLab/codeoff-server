@@ -62,6 +62,7 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 		events = newEventHub(appServer.Events())
 	}
 	mux := http.NewServeMux()
+	apiMux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok\n"))
@@ -88,7 +89,7 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 			Token  string         `json:"token"`
 		}{device, deviceStore.Server(), token})
 	})
-	mux.Handle("GET /api/v1/status", authenticate(deviceStore, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	apiMux.Handle("GET /api/v1/status", authenticate(deviceStore, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		value, err := json.Marshal(status(r.Context()))
 		if err != nil {
@@ -105,9 +106,9 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 			http.Error(w, "encode status: "+err.Error(), http.StatusInternalServerError)
 		}
 	})))
-	mux.Handle("GET /api/v1/directories", authenticate(deviceStore, http.HandlerFunc(listDirectories)))
-	mux.Handle("POST /api/v1/files", authenticate(deviceStore, http.HandlerFunc(server.uploadFile)))
-	mux.Handle("GET /api/v1/threads", authenticate(deviceStore, callAppServer(appServer, "thread/list", func(r *http.Request) any {
+	apiMux.Handle("GET /api/v1/directories", authenticate(deviceStore, http.HandlerFunc(listDirectories)))
+	apiMux.Handle("POST /api/v1/files", authenticate(deviceStore, http.HandlerFunc(server.uploadFile)))
+	apiMux.Handle("GET /api/v1/threads", authenticate(deviceStore, callAppServer(appServer, "thread/list", func(r *http.Request) any {
 		params := map[string]any{}
 		query := r.URL.Query()
 		if cursor := query.Get("cursor"); cursor != "" {
@@ -118,10 +119,10 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 		}
 		return params
 	})))
-	mux.Handle("GET /api/v1/threads/{threadID}", authenticate(deviceStore, callAppServer(appServer, "thread/read", func(r *http.Request) any {
+	apiMux.Handle("GET /api/v1/threads/{threadID}", authenticate(deviceStore, callAppServer(appServer, "thread/read", func(r *http.Request) any {
 		return map[string]any{"threadId": r.PathValue("threadID"), "includeTurns": true}
 	})))
-	mux.Handle("POST /api/v1/threads", authenticate(deviceStore, callAppServer(appServer, "thread/start", func(r *http.Request) any {
+	apiMux.Handle("POST /api/v1/threads", authenticate(deviceStore, callAppServer(appServer, "thread/start", func(r *http.Request) any {
 		var request struct {
 			CWD string `json:"cwd"`
 		}
@@ -134,13 +135,13 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 		}
 		return params
 	})))
-	mux.Handle("POST /api/v1/threads/{threadID}/resume", authenticate(deviceStore, resumeThread(appServer)))
-	mux.Handle("POST /api/v1/threads/{threadID}/unsubscribe", authenticate(deviceStore, callAppServer(appServer, "thread/unsubscribe", func(r *http.Request) any {
+	apiMux.Handle("POST /api/v1/threads/{threadID}/resume", authenticate(deviceStore, resumeThread(appServer)))
+	apiMux.Handle("POST /api/v1/threads/{threadID}/unsubscribe", authenticate(deviceStore, callAppServer(appServer, "thread/unsubscribe", func(r *http.Request) any {
 		return map[string]string{"threadId": r.PathValue("threadID")}
 	})))
-	mux.Handle("POST /api/v1/threads/{threadID}/release", authenticate(deviceStore, releaseThread(appServer)))
-	mux.Handle("POST /api/v1/threads/{threadID}/takeover", authenticate(deviceStore, takeOverThread(appServer)))
-	mux.Handle("POST /api/v1/threads/{threadID}/name", authenticate(deviceStore, callAppServer(appServer, "thread/name/set", func(r *http.Request) any {
+	apiMux.Handle("POST /api/v1/threads/{threadID}/release", authenticate(deviceStore, releaseThread(appServer)))
+	apiMux.Handle("POST /api/v1/threads/{threadID}/takeover", authenticate(deviceStore, takeOverThread(appServer)))
+	apiMux.Handle("POST /api/v1/threads/{threadID}/name", authenticate(deviceStore, callAppServer(appServer, "thread/name/set", func(r *http.Request) any {
 		var request struct {
 			Name string `json:"name"`
 		}
@@ -152,10 +153,10 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 		}
 		return map[string]string{"threadId": r.PathValue("threadID"), "name": strings.TrimSpace(request.Name)}
 	})))
-	mux.Handle("POST /api/v1/threads/{threadID}/archive", authenticate(deviceStore, callAppServer(appServer, "thread/archive", func(r *http.Request) any {
+	apiMux.Handle("POST /api/v1/threads/{threadID}/archive", authenticate(deviceStore, callAppServer(appServer, "thread/archive", func(r *http.Request) any {
 		return map[string]string{"threadId": r.PathValue("threadID")}
 	})))
-	mux.Handle("POST /api/v1/threads/{threadID}/turns", authenticate(deviceStore, callAppServer(appServer, "turn/start", func(r *http.Request) any {
+	apiMux.Handle("POST /api/v1/threads/{threadID}/turns", authenticate(deviceStore, callAppServer(appServer, "turn/start", func(r *http.Request) any {
 		var request turnRequest
 		if err := decodeBody(r, &request); err != nil {
 			return requestError{err}
@@ -173,7 +174,7 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 		}
 		return params
 	})))
-	mux.Handle("POST /api/v1/turns/{turnID}/steer", authenticate(deviceStore, callAppServer(appServer, "turn/steer", func(r *http.Request) any {
+	apiMux.Handle("POST /api/v1/turns/{turnID}/steer", authenticate(deviceStore, callAppServer(appServer, "turn/steer", func(r *http.Request) any {
 		var request turnRequest
 		if err := decodeBody(r, &request); err != nil {
 			return requestError{err}
@@ -192,11 +193,11 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 			"input":          input,
 		}
 	})))
-	mux.Handle("POST /api/v1/turns/{turnID}/interrupt", authenticate(deviceStore, callAppServer(appServer, "turn/interrupt", func(r *http.Request) any {
+	apiMux.Handle("POST /api/v1/turns/{turnID}/interrupt", authenticate(deviceStore, callAppServer(appServer, "turn/interrupt", func(r *http.Request) any {
 		return map[string]string{"threadId": r.URL.Query().Get("threadId"), "turnId": r.PathValue("turnID")}
 	})))
-	mux.Handle("POST /api/v1/approvals/{requestID}", authenticate(deviceStore, respondApproval(appServer)))
-	mux.Handle("GET /api/v1/events", authenticate(deviceStore, eventsStream(appServer, events)))
+	apiMux.Handle("POST /api/v1/approvals/{requestID}", authenticate(deviceStore, respondApproval(appServer)))
+	mux.HandleFunc("GET /api/v1/ws", websocketHandler(deviceStore, apiMux, events))
 	server.httpServer = &http.Server{Handler: mux}
 	return server
 }
@@ -428,42 +429,6 @@ func takeOverThread(appServer AppServer) http.Handler {
 	})
 }
 
-func eventsStream(appServer AppServer, hub *eventHub) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if appServer == nil || hub == nil {
-			http.Error(w, "app-server is not running", http.StatusServiceUnavailable)
-			return
-		}
-		flusher, ok := w.(http.Flusher)
-		if !ok {
-			http.Error(w, "streaming unsupported", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "text/event-stream")
-		w.Header().Set("Cache-Control", "no-cache")
-		w.Header().Set("Connection", "keep-alive")
-		events, unsubscribe := hub.subscribe()
-		defer unsubscribe()
-		for {
-			select {
-			case event, ok := <-events:
-				if !ok {
-					return
-				}
-				payloadValue := map[string]any{"method": event.Method, "params": json.RawMessage(event.Params)}
-				if event.ID != nil {
-					payloadValue["id"] = *event.ID
-				}
-				payload, _ := json.Marshal(payloadValue)
-				_, _ = w.Write([]byte("data: " + string(payload) + "\n\n"))
-				flusher.Flush()
-			case <-r.Context().Done():
-				return
-			}
-		}
-	})
-}
-
 func respondApproval(appServer AppServer) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if appServer == nil {
@@ -541,19 +506,17 @@ func writeAppServerError(w http.ResponseWriter, err error) {
 
 func authenticate(store *devices.Store, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		scheme, token, found := strings.Cut(r.Header.Get("Authorization"), " ")
-		if !found || !strings.EqualFold(scheme, "Bearer") {
-			w.Header().Set("WWW-Authenticate", "Bearer")
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
+		if _, ok := r.Context().Value(authenticatedDeviceKey{}).(devices.Device); !ok {
+			device, ok := authenticateDevice(store, r.Header.Get("Authorization"))
+			if !ok {
+				w.Header().Set("WWW-Authenticate", "Bearer")
+				http.Error(w, "unauthorized", http.StatusUnauthorized)
+				return
+			}
+			disconnect := store.Connect(device.ID)
+			defer disconnect()
+			r = r.WithContext(context.WithValue(r.Context(), authenticatedDeviceKey{}, device))
 		}
-		device, ok := store.Authenticate(token)
-		if !ok {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-		disconnect := store.Connect(device.ID)
-		defer disconnect()
 		next.ServeHTTP(w, r)
 	})
 }
