@@ -459,7 +459,7 @@ func respondApproval(appServer AppServer) http.Handler {
 			return
 		}
 		requestID, err := strconv.ParseInt(r.PathValue("requestID"), 10, 64)
-		if err != nil || requestID < 1 {
+		if err != nil {
 			http.Error(w, "invalid approval request id", http.StatusBadRequest)
 			return
 		}

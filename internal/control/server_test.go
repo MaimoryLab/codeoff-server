@@ -207,7 +207,7 @@ func TestApprovalResponseRequiresAuthAndForwardsDecision(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	request, _ := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/approvals/42", bytes.NewReader([]byte(`{"decision":"accept"}`)))
+	request, _ := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/approvals/0", bytes.NewReader([]byte(`{"decision":"accept"}`)))
 	request.Header.Set("Authorization", "Bearer "+exchange.Token)
 	request.Header.Set("Content-Type", "application/json")
 	response, err := http.DefaultClient.Do(request)
@@ -218,7 +218,7 @@ func TestApprovalResponseRequiresAuthAndForwardsDecision(t *testing.T) {
 	if response.StatusCode != http.StatusNoContent {
 		t.Fatalf("approval status = %d", response.StatusCode)
 	}
-	if fake.id != 42 {
+	if fake.id != 0 {
 		t.Fatalf("approval id = %d", fake.id)
 	}
 	result, ok := fake.result.(map[string]json.RawMessage)
