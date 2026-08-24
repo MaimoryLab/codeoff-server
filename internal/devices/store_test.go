@@ -89,3 +89,22 @@ func TestDevicesPersistWithoutPlaintextToken(t *testing.T) {
 		t.Fatal("persisted token hash did not authenticate")
 	}
 }
+
+func TestServerIdentityPersists(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "devices.json")
+	store, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := store.Server()
+	if identity.ID == "" || identity.Name == "" {
+		t.Fatalf("server identity = %+v", identity)
+	}
+	reopened, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reopened.Server() != identity {
+		t.Fatalf("server identity changed: %v -> %v", identity, reopened.Server())
+	}
+}
