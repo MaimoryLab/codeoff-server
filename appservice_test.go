@@ -27,9 +27,11 @@ func TestServiceStatus(t *testing.T) {
 	for _, test := range []struct {
 		installed bool
 		running   bool
+		starting  bool
+		stopping  bool
 		want      string
-	}{{false, false, "未安装"}, {true, false, "停止"}, {true, true, "运行"}} {
-		if got := serviceStatus(test.installed, test.running); got != test.want {
+	}{{want: "未安装"}, {installed: true, want: "停止"}, {installed: true, running: true, want: "运行"}, {installed: true, starting: true, want: "启动中"}, {installed: true, stopping: true, want: "停止中"}} {
+		if got := serviceStatus(test.installed, test.running, test.starting, test.stopping); got != test.want {
 			t.Fatalf("service status = %q, want %q", got, test.want)
 		}
 	}

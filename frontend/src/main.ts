@@ -41,12 +41,13 @@ let controlAddr = "";
 type RuntimeState = {
     running: boolean;
     starting: boolean;
+    stopping: boolean;
     startedAt: string;
     userAgent?: string;
     error?: string;
 };
 
-type TunnelState = { running: boolean; starting: boolean; url?: string; error?: string };
+type TunnelState = { running: boolean; starting: boolean; stopping: boolean; url?: string; error?: string };
 
 type Device = { id: string; name: string; createdAt: string; lastSeen: string; connected?: boolean };
 
@@ -82,25 +83,25 @@ function render(snapshot: Snapshot) {
 
 function renderAppServer(state: RuntimeState, address = controlAddr) {
     appServerRunning = state.running;
-    appServerState.textContent = state.starting ? "Starting" : state.running ? "Running" : "Offline";
+    appServerState.textContent = state.starting ? "Starting" : state.stopping ? "Stopping" : state.running ? "Running" : "Offline";
     appServerState.className = state.running ? "state-online" : "state-offline";
     appServerDetail.textContent = state.error || (state.running ? "Local control endpoint" : "Stopped");
     appServerAddress.textContent = address || "-";
     copyAppServerButton.disabled = !address;
-    toggleAppServerButton.textContent = state.running ? "Stop" : "Start";
-    toggleAppServerButton.disabled = state.starting;
+    toggleAppServerButton.textContent = state.running || state.starting ? "Stop" : "Start";
+    toggleAppServerButton.disabled = state.starting || state.stopping;
 }
 
 function renderTunnel(state: TunnelState) {
     tunnelRunning = state.running;
     tunnelURL = state.url || "";
-    tunnelState.textContent = state.starting ? "Starting" : state.running ? "Online" : "Offline";
+    tunnelState.textContent = state.starting ? "Starting" : state.stopping ? "Stopping" : state.running ? "Online" : "Offline";
     tunnelState.className = state.running ? "state-online" : "state-offline";
     tunnelDetail.textContent = cloudflaredInstalled ? state.error || (state.running ? "Remote access enabled" : "Stopped") : "Install Cloudflared to enable remote access";
     tunnelAddress.hidden = !tunnelURL;
     tunnelAddressValue.textContent = tunnelURL || "-";
-    toggleTunnelButton.textContent = state.running ? "Stop" : "Start";
-    toggleTunnelButton.disabled = state.starting || !cloudflaredInstalled;
+    toggleTunnelButton.textContent = state.running || state.starting ? "Stop" : "Start";
+    toggleTunnelButton.disabled = state.starting || state.stopping || !cloudflaredInstalled;
     toggleTunnelButton.title = cloudflaredInstalled ? "" : "Install Cloudflared first";
     updatePairingCode();
 }

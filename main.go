@@ -85,12 +85,12 @@ func main() {
 
 	updateTrayMenu = func() {
 		overview := service.Overview()
-		appServerStatus.SetLabel("App-server：" + serviceStatus(overview.Environment.AppServer.Installed, overview.AppServer.Running))
+		appServerStatus.SetLabel("App-server：" + serviceStatus(overview.Environment.AppServer.Installed, overview.AppServer.Running, overview.AppServer.Starting, overview.AppServer.Stopping))
 		appServerAddress.SetLabel(overview.ControlAddr).SetHidden(!overview.AppServer.Running)
-		appServerToggle.SetLabel(toggleLabel(overview.AppServer.Running)).SetEnabled(overview.Environment.AppServer.Installed && !overview.AppServer.Starting)
-		tunnelStatus.SetLabel("CF Tunnel：" + serviceStatus(overview.Environment.Cloudflared.Installed, overview.Tunnel.Running))
+		appServerToggle.SetLabel(toggleLabel(overview.AppServer.Running || overview.AppServer.Starting)).SetEnabled(overview.Environment.AppServer.Installed && !overview.AppServer.Starting && !overview.AppServer.Stopping)
+		tunnelStatus.SetLabel("CF Tunnel：" + serviceStatus(overview.Environment.Cloudflared.Installed, overview.Tunnel.Running, overview.Tunnel.Starting, overview.Tunnel.Stopping))
 		tunnelAddress.SetLabel(overview.Tunnel.URL).SetHidden(!overview.Tunnel.Running)
-		tunnelToggle.SetLabel(toggleLabel(overview.Tunnel.Running)).SetEnabled(overview.Environment.Cloudflared.Installed && !overview.Tunnel.Starting)
+		tunnelToggle.SetLabel(toggleLabel(overview.Tunnel.Running || overview.Tunnel.Starting)).SetEnabled(overview.Environment.Cloudflared.Installed && !overview.Tunnel.Starting && !overview.Tunnel.Stopping)
 	}
 	updateTrayMenu()
 
@@ -110,9 +110,15 @@ func main() {
 	}
 }
 
-func serviceStatus(installed, running bool) string {
+func serviceStatus(installed, running, starting, stopping bool) string {
 	if !installed {
 		return "未安装"
+	}
+	if starting {
+		return "启动中"
+	}
+	if stopping {
+		return "停止中"
 	}
 	if running {
 		return "运行"

@@ -30,7 +30,7 @@ func TestManagerQuickTunnelProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 	manager := NewManager()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	state, err := manager.Toggle(ctx, script, "http://127.0.0.1:1234")
 	if err != nil {

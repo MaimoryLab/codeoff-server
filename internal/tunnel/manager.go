@@ -17,6 +17,7 @@ var quickTunnelURL = regexp.MustCompile(`https://[A-Za-z0-9.-]+\.trycloudflare\.
 type State struct {
 	Running   bool      `json:"running"`
 	Starting  bool      `json:"starting"`
+	Stopping  bool      `json:"stopping"`
 	URL       string    `json:"url,omitempty"`
 	StartedAt time.Time `json:"startedAt"`
 	Error     string    `json:"error,omitempty"`
@@ -52,7 +53,7 @@ func (m *Manager) Toggle(ctx context.Context, executable, origin string) (State,
 }
 
 func (m *Manager) startLocked(ctx context.Context, executable, origin string) (State, error) {
-	if state := m.State(); state.Running || state.Starting {
+	if state := m.State(); state.Running || state.Starting || state.Stopping {
 		return state, nil
 	}
 	if origin == "" {
@@ -114,14 +115,17 @@ func (m *Manager) Stop() error {
 func (m *Manager) stopLocked() error {
 	m.mu.Lock()
 	cancel, command := m.cancel, m.command
-	m.cancel, m.command, m.state = nil, nil, State{}
+	m.cancel, m.command, m.state = nil, nil, State{Stopping: cancel != nil || command != nil}
 	m.mu.Unlock()
 	if cancel != nil {
 		cancel()
 	}
 	if command != nil {
-		return command.Process.Kill()
+		err := command.Process.Kill()
+		m.setState(State{})
+		return err
 	}
+	m.setState(State{})
 	return nil
 }
 

@@ -4,6 +4,7 @@
 export interface State {
     "running": boolean;
     "starting": boolean;
+    "stopping": boolean;
     "url"?: string;
     "startedAt": string;
     "error"?: string;

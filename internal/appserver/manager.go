@@ -13,6 +13,7 @@ import (
 type State struct {
 	Running   bool      `json:"running"`
 	Starting  bool      `json:"starting"`
+	Stopping  bool      `json:"stopping"`
 	StartedAt time.Time `json:"startedAt"`
 	CodexHome string    `json:"codexHome,omitempty"`
 	UserAgent string    `json:"userAgent,omitempty"`
@@ -65,7 +66,7 @@ func (m *Manager) Toggle(ctx context.Context, executable string) (State, error) 
 }
 
 func (m *Manager) startLocked(ctx context.Context, executable string) (State, error) {
-	if state := m.State(); state.Running || state.Starting {
+	if state := m.State(); state.Running || state.Starting || state.Stopping {
 		return state, nil
 	}
 	m.setState(State{Starting: true})
@@ -115,15 +116,18 @@ func (m *Manager) stopLocked() error {
 	m.mu.Lock()
 	client, cancel := m.client, m.cancel
 	m.client, m.cancel = nil, nil
-	m.state = State{}
+	m.state = State{Stopping: client != nil || cancel != nil}
 	m.mu.Unlock()
 	if cancel != nil {
 		cancel()
 	}
 	if client == nil {
+		m.setState(State{})
 		return nil
 	}
-	return client.Close()
+	err := client.Close()
+	m.setState(State{})
+	return err
 }
 
 func (m *Manager) State() State {

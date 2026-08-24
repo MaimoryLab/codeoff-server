@@ -4,6 +4,7 @@
 export interface State {
     "running": boolean;
     "starting": boolean;
+    "stopping": boolean;
     "startedAt": string;
     "codexHome"?: string;
     "userAgent"?: string;

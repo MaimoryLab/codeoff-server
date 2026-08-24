@@ -4,10 +4,24 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"io"
 	"net"
 	"sync/atomic"
 	"testing"
 )
+
+type blockingTransport struct {
+	closed  chan struct{}
+	release chan struct{}
+}
+
+func (*blockingTransport) Read([]byte) (int, error)    { return 0, io.EOF }
+func (*blockingTransport) Write(p []byte) (int, error) { return len(p), nil }
+func (t *blockingTransport) Close() error {
+	close(t.closed)
+	<-t.release
+	return nil
+}
 
 func TestManagerStartAndStop(t *testing.T) {
 	manager := newManager(func(context.Context, string, ...string) (*Client, error) {
@@ -29,6 +43,26 @@ func TestManagerStartAndStop(t *testing.T) {
 	}
 	if state.Running {
 		t.Fatal("manager still running after stop")
+	}
+}
+
+func TestManagerReportsStopping(t *testing.T) {
+	transport := &blockingTransport{closed: make(chan struct{}), release: make(chan struct{})}
+	manager := newManager(nil)
+	manager.client = &Client{transport: transport}
+	manager.state = State{Running: true}
+	done := make(chan error, 1)
+	go func() { done <- manager.Stop() }()
+	<-transport.closed
+	if !manager.State().Stopping {
+		t.Fatal("manager did not report stopping")
+	}
+	close(transport.release)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	if manager.State().Stopping {
+		t.Fatal("manager still reports stopping")
 	}
 }
 
