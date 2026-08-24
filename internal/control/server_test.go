@@ -424,9 +424,10 @@ func TestUploadAndTurnForwardAttachments(t *testing.T) {
 	}
 
 	body, _ := json.Marshal(map[string]any{
-		"input":          "inspect this",
-		"approvalPolicy": "on-request",
-		"sandboxPolicy":  map[string]string{"type": "workspaceWrite"},
+		"input":             "inspect this",
+		"approvalPolicy":    "on-request",
+		"approvalsReviewer": "auto_review",
+		"sandboxPolicy":     map[string]string{"type": "workspaceWrite"},
 		"attachments": []map[string]string{
 			{"name": "photo.png", "path": uploaded.Path},
 			{"name": "notes.txt", "path": uploadedText.Path},
@@ -447,7 +448,8 @@ func TestUploadAndTurnForwardAttachments(t *testing.T) {
 	input, inputOK := params["input"].([]map[string]string)
 	sandbox, sandboxOK := params["sandboxPolicy"].(*sandboxPolicy)
 	if fake.method != "turn/start" || !ok || !inputOK || len(input) != 2 ||
-		params["approvalPolicy"] != "on-request" || !sandboxOK || sandbox.Type != "workspaceWrite" ||
+		params["approvalPolicy"] != "on-request" || params["approvalsReviewer"] != "auto_review" ||
+		!sandboxOK || sandbox.Type != "workspaceWrite" ||
 		!strings.Contains(input[0]["text"], "photo.png: "+uploaded.Path) ||
 		!strings.Contains(input[0]["text"], "notes.txt: "+uploadedText.Path) ||
 		input[1]["type"] != "localImage" || input[1]["path"] != uploaded.Path {
@@ -460,6 +462,7 @@ func TestTurnPermissionsValidation(t *testing.T) {
 		{ApprovalPolicy: "never"},
 		{ApprovalPolicy: "always", SandboxPolicy: &sandboxPolicy{Type: "workspaceWrite"}},
 		{ApprovalPolicy: "never", SandboxPolicy: &sandboxPolicy{Type: "hostWrite"}},
+		{ApprovalPolicy: "never", ApprovalsReviewer: "anyone", SandboxPolicy: &sandboxPolicy{Type: "workspaceWrite"}},
 	} {
 		if err := request.addPermissions(map[string]any{}); err == nil {
 			t.Fatalf("permissions accepted: %#v", request)

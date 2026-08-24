@@ -28,10 +28,11 @@ type Server struct {
 }
 
 type turnRequest struct {
-	Input          string         `json:"input"`
-	ApprovalPolicy string         `json:"approvalPolicy"`
-	SandboxPolicy  *sandboxPolicy `json:"sandboxPolicy"`
-	Attachments    []struct {
+	Input             string         `json:"input"`
+	ApprovalPolicy    string         `json:"approvalPolicy"`
+	ApprovalsReviewer string         `json:"approvalsReviewer"`
+	SandboxPolicy     *sandboxPolicy `json:"sandboxPolicy"`
+	Attachments       []struct {
 		Name string `json:"name"`
 		Path string `json:"path"`
 	} `json:"attachments"`
@@ -201,7 +202,13 @@ func (r turnRequest) addPermissions(params map[string]any) error {
 	if r.SandboxPolicy.Type != "workspaceWrite" && r.SandboxPolicy.Type != "dangerFullAccess" {
 		return errors.New("invalid sandboxPolicy")
 	}
+	if r.ApprovalsReviewer != "" && r.ApprovalsReviewer != "user" && r.ApprovalsReviewer != "auto_review" && r.ApprovalsReviewer != "guardian_subagent" {
+		return errors.New("invalid approvalsReviewer")
+	}
 	params["approvalPolicy"] = r.ApprovalPolicy
+	if r.ApprovalsReviewer != "" {
+		params["approvalsReviewer"] = r.ApprovalsReviewer
+	}
 	params["sandboxPolicy"] = r.SandboxPolicy
 	return nil
 }
