@@ -91,6 +91,32 @@ func TestManagerTakeOverThread(t *testing.T) {
 	}
 }
 
+func TestManagerTakeOverThreadReleasesOwnLock(t *testing.T) {
+	var unsubscribed atomic.Bool
+	var terminated atomic.Bool
+	manager := newManager(func(context.Context, string, ...string) (*Client, error) {
+		clientTransport, serverTransport := net.Pipe()
+		go serveOwnTakeover(serverTransport, &unsubscribed)
+		return New(clientTransport), nil
+	})
+	manager.terminate = func(context.Context, string, string) error {
+		terminated.Store(true)
+		return nil
+	}
+	t.Cleanup(func() { _ = manager.Stop() })
+	if _, err := manager.Start(context.Background(), "codex"); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := manager.TakeOverThread(context.Background(), "thread-42")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !unsubscribed.Load() || terminated.Load() || string(result) != `{"thread":{"id":"thread-42"}}` {
+		t.Fatalf("unsubscribed = %t, terminated = %t, result = %s", unsubscribed.Load(), terminated.Load(), result)
+	}
+}
+
 func serveRelease(connection net.Conn, status string) {
 	defer connection.Close()
 	scanner := bufio.NewScanner(connection)
@@ -140,6 +166,34 @@ func serveTakeover(connection net.Conn, terminated *atomic.Bool) {
 			}
 		default:
 			response["result"] = map[string]any{}
+		}
+		if encoder.Encode(response) != nil {
+			return
+		}
+	}
+}
+
+func serveOwnTakeover(connection net.Conn, unsubscribed *atomic.Bool) {
+	defer connection.Close()
+	scanner := bufio.NewScanner(connection)
+	encoder := json.NewEncoder(connection)
+	for scanner.Scan() {
+		var request message
+		if json.Unmarshal(scanner.Bytes(), &request) != nil || request.ID == nil {
+			continue
+		}
+		response := map[string]any{"id": request.ID, "result": map[string]any{}}
+		switch request.Method {
+		case "initialize":
+			response["result"] = map[string]any{"userAgent": "test", "codexHome": "/tmp/codex"}
+		case "thread/resume":
+			if !unsubscribed.Load() {
+				response["error"] = map[string]any{"code": -32600, "message": "active writer"}
+			} else {
+				response["result"] = map[string]any{"thread": map[string]string{"id": "thread-42"}}
+			}
+		case "thread/unsubscribe":
+			unsubscribed.Store(true)
 		}
 		if encoder.Encode(response) != nil {
 			return

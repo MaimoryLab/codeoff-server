@@ -37,6 +37,7 @@ type turnRequest struct {
 
 type AppServer interface {
 	Call(context.Context, string, any) (json.RawMessage, error)
+	ResumeThread(context.Context, string) (json.RawMessage, error)
 	ReleaseThread(context.Context, string) (bool, error)
 	TakeOverThread(context.Context, string) (json.RawMessage, error)
 	Respond(int64, any, *appserver.RPCError) error
@@ -114,9 +115,7 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 		}
 		return params
 	})))
-	mux.Handle("POST /api/v1/threads/{threadID}/resume", authenticate(deviceStore, callAppServer(appServer, "thread/resume", func(r *http.Request) any {
-		return map[string]string{"threadId": r.PathValue("threadID")}
-	})))
+	mux.Handle("POST /api/v1/threads/{threadID}/resume", authenticate(deviceStore, resumeThread(appServer)))
 	mux.Handle("POST /api/v1/threads/{threadID}/unsubscribe", authenticate(deviceStore, callAppServer(appServer, "thread/unsubscribe", func(r *http.Request) any {
 		return map[string]string{"threadId": r.PathValue("threadID")}
 	})))
@@ -177,6 +176,21 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 	mux.Handle("GET /api/v1/events", authenticate(deviceStore, eventsStream(appServer, events)))
 	server.httpServer = &http.Server{Handler: mux}
 	return server
+}
+
+func resumeThread(appServer AppServer) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if appServer == nil {
+			http.Error(w, "app-server is not running", http.StatusServiceUnavailable)
+			return
+		}
+		result, err := appServer.ResumeThread(r.Context(), r.PathValue("threadID"))
+		if err != nil {
+			writeAppServerError(w, err)
+			return
+		}
+		writeRawJSON(w, result)
+	})
 }
 
 type directoryEntry struct {

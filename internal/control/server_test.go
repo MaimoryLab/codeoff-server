@@ -31,6 +31,11 @@ func (s *fakeApprovalServer) Call(_ context.Context, method string, params any) 
 	return json.RawMessage(`{}`), nil
 }
 
+func (s *fakeApprovalServer) ResumeThread(_ context.Context, threadID string) (json.RawMessage, error) {
+	s.method, s.params = "thread/resume", map[string]string{"threadId": threadID}
+	return json.RawMessage(`{}`), nil
+}
+
 func (s *fakeApprovalServer) ReleaseThread(_ context.Context, threadID string) (bool, error) {
 	s.method, s.params = "thread/release", map[string]string{"threadId": threadID}
 	return true, nil

@@ -137,6 +137,18 @@ func (m *Manager) Call(ctx context.Context, method string, params any) (json.Raw
 	return result, nil
 }
 
+func (m *Manager) ResumeThread(ctx context.Context, threadID string) (json.RawMessage, error) {
+	m.operationMu.Lock()
+	defer m.operationMu.Unlock()
+	m.mu.RLock()
+	client := m.client
+	m.mu.RUnlock()
+	if client == nil {
+		return nil, errors.New("app-server is not running")
+	}
+	return resumeOwnedThread(ctx, client, threadID)
+}
+
 func (m *Manager) ReleaseThread(ctx context.Context, threadID string) (bool, error) {
 	m.operationMu.Lock()
 	defer m.operationMu.Unlock()
@@ -169,7 +181,7 @@ func (m *Manager) TakeOverThread(ctx context.Context, threadID string) (json.Raw
 	}
 
 	params := map[string]string{"threadId": threadID}
-	result, err := resumeThread(ctx, client, params)
+	result, err := resumeOwnedThread(ctx, client, threadID)
 	if err == nil || !isWriterConflict(err) {
 		return result, err
 	}
@@ -192,6 +204,18 @@ func (m *Manager) TakeOverThread(ctx context.Context, threadID string) (json.Raw
 		case <-ticker.C:
 		}
 	}
+}
+
+func resumeOwnedThread(ctx context.Context, client *Client, threadID string) (json.RawMessage, error) {
+	params := map[string]string{"threadId": threadID}
+	result, err := resumeThread(ctx, client, params)
+	if err == nil || !isWriterConflict(err) {
+		return result, err
+	}
+	if unsubscribeErr := client.Call(ctx, "thread/unsubscribe", params, nil); unsubscribeErr != nil {
+		return result, err
+	}
+	return resumeThread(ctx, client, params)
 }
 
 func resumeThread(ctx context.Context, client *Client, params any) (json.RawMessage, error) {
