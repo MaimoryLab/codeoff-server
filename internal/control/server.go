@@ -5,12 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -25,6 +23,7 @@ type Server struct {
 	listener   net.Listener
 	uploadMu   sync.RWMutex
 	uploads    map[string]bool
+	status     func(context.Context) any
 }
 
 type turnRequest struct {
@@ -52,7 +51,10 @@ type AppServer interface {
 }
 
 func New[T any](status func(context.Context) T, deviceStore *devices.Store, appServers ...AppServer) *Server {
-	server := &Server{uploads: make(map[string]bool)}
+	server := &Server{
+		uploads: make(map[string]bool),
+		status:  func(ctx context.Context) any { return status(ctx) },
+	}
 	var appServer AppServer
 	if len(appServers) > 0 {
 		appServer = appServers[0]
@@ -62,7 +64,6 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 		events = newEventHub(appServer.Events())
 	}
 	mux := http.NewServeMux()
-	apiMux := http.NewServeMux()
 	mux.HandleFunc("POST /api/v1/pair/exchange", func(w http.ResponseWriter, r *http.Request) {
 		var request struct {
 			Token string `json:"token"`
@@ -85,115 +86,7 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 			Token  string         `json:"token"`
 		}{device, deviceStore.Server(), token})
 	})
-	apiMux.Handle("GET /api/v1/status", authenticate(deviceStore, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		value, err := json.Marshal(status(r.Context()))
-		if err != nil {
-			http.Error(w, "encode status: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		var payload map[string]any
-		if err := json.Unmarshal(value, &payload); err != nil {
-			http.Error(w, "encode status: "+err.Error(), http.StatusInternalServerError)
-			return
-		}
-		payload["server"] = deviceStore.Server()
-		if err := json.NewEncoder(w).Encode(payload); err != nil {
-			http.Error(w, "encode status: "+err.Error(), http.StatusInternalServerError)
-		}
-	})))
-	apiMux.Handle("GET /api/v1/directories", authenticate(deviceStore, http.HandlerFunc(listDirectories)))
-	apiMux.Handle("POST /api/v1/files", authenticate(deviceStore, http.HandlerFunc(server.uploadFile)))
-	apiMux.Handle("GET /api/v1/threads", authenticate(deviceStore, callAppServer(appServer, "thread/list", func(r *http.Request) any {
-		params := map[string]any{}
-		query := r.URL.Query()
-		if cursor := query.Get("cursor"); cursor != "" {
-			params["cursor"] = cursor
-		}
-		if limit, err := strconv.Atoi(query.Get("limit")); err == nil && limit > 0 {
-			params["limit"] = limit
-		}
-		return params
-	})))
-	apiMux.Handle("GET /api/v1/threads/{threadID}", authenticate(deviceStore, callAppServer(appServer, "thread/read", func(r *http.Request) any {
-		return map[string]any{"threadId": r.PathValue("threadID"), "includeTurns": true}
-	})))
-	apiMux.Handle("POST /api/v1/threads", authenticate(deviceStore, callAppServer(appServer, "thread/start", func(r *http.Request) any {
-		var request struct {
-			CWD string `json:"cwd"`
-		}
-		if err := decodeBody(r, &request); err != nil {
-			return requestError{err}
-		}
-		params := map[string]any{}
-		if request.CWD != "" {
-			params["cwd"] = request.CWD
-		}
-		return params
-	})))
-	apiMux.Handle("POST /api/v1/threads/{threadID}/resume", authenticate(deviceStore, resumeThread(appServer)))
-	apiMux.Handle("POST /api/v1/threads/{threadID}/unsubscribe", authenticate(deviceStore, callAppServer(appServer, "thread/unsubscribe", func(r *http.Request) any {
-		return map[string]string{"threadId": r.PathValue("threadID")}
-	})))
-	apiMux.Handle("POST /api/v1/threads/{threadID}/release", authenticate(deviceStore, releaseThread(appServer)))
-	apiMux.Handle("POST /api/v1/threads/{threadID}/takeover", authenticate(deviceStore, takeOverThread(appServer)))
-	apiMux.Handle("POST /api/v1/threads/{threadID}/name", authenticate(deviceStore, callAppServer(appServer, "thread/name/set", func(r *http.Request) any {
-		var request struct {
-			Name string `json:"name"`
-		}
-		if err := decodeBody(r, &request); err != nil {
-			return requestError{err}
-		}
-		if strings.TrimSpace(request.Name) == "" {
-			return requestError{errors.New("name is required")}
-		}
-		return map[string]string{"threadId": r.PathValue("threadID"), "name": strings.TrimSpace(request.Name)}
-	})))
-	apiMux.Handle("POST /api/v1/threads/{threadID}/archive", authenticate(deviceStore, callAppServer(appServer, "thread/archive", func(r *http.Request) any {
-		return map[string]string{"threadId": r.PathValue("threadID")}
-	})))
-	apiMux.Handle("POST /api/v1/threads/{threadID}/turns", authenticate(deviceStore, callAppServer(appServer, "turn/start", func(r *http.Request) any {
-		var request turnRequest
-		if err := decodeBody(r, &request); err != nil {
-			return requestError{err}
-		}
-		input, err := server.userInput(request)
-		if err != nil {
-			return requestError{err}
-		}
-		params := map[string]any{
-			"threadId": r.PathValue("threadID"),
-			"input":    input,
-		}
-		if err := request.addPermissions(params); err != nil {
-			return requestError{err}
-		}
-		return params
-	})))
-	apiMux.Handle("POST /api/v1/turns/{turnID}/steer", authenticate(deviceStore, callAppServer(appServer, "turn/steer", func(r *http.Request) any {
-		var request turnRequest
-		if err := decodeBody(r, &request); err != nil {
-			return requestError{err}
-		}
-		threadID := r.URL.Query().Get("threadId")
-		input, err := server.userInput(request)
-		if threadID == "" || err != nil {
-			if err == nil {
-				err = errors.New("threadId is required")
-			}
-			return requestError{err}
-		}
-		return map[string]any{
-			"threadId":       threadID,
-			"expectedTurnId": r.PathValue("turnID"),
-			"input":          input,
-		}
-	})))
-	apiMux.Handle("POST /api/v1/turns/{turnID}/interrupt", authenticate(deviceStore, callAppServer(appServer, "turn/interrupt", func(r *http.Request) any {
-		return map[string]string{"threadId": r.URL.Query().Get("threadId"), "turnId": r.PathValue("turnID")}
-	})))
-	apiMux.Handle("POST /api/v1/approvals/{requestID}", authenticate(deviceStore, respondApproval(appServer)))
-	mux.HandleFunc("GET /api/v1/ws", websocketHandler(deviceStore, apiMux, events))
+	mux.HandleFunc("GET /api/v1/ws", websocketHandler(server, deviceStore, appServer, events))
 	server.httpServer = &http.Server{Handler: mux}
 	return server
 }
@@ -222,80 +115,54 @@ func (r turnRequest) addPermissions(params map[string]any) error {
 	return nil
 }
 
-func resumeThread(appServer AppServer) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if appServer == nil {
-			http.Error(w, "app-server is not running", http.StatusServiceUnavailable)
-			return
-		}
-		result, err := appServer.ResumeThread(r.Context(), r.PathValue("threadID"))
-		if err != nil {
-			writeAppServerError(w, err)
-			return
-		}
-		writeRawJSON(w, result)
-	})
-}
-
 type directoryEntry struct {
 	Name string `json:"name"`
 	Path string `json:"path"`
 }
 
-func listDirectories(w http.ResponseWriter, r *http.Request) {
-	path := strings.TrimSpace(r.URL.Query().Get("path"))
+func listDirectoriesValue(rawPath string) (map[string]any, error) {
+	path := strings.TrimSpace(rawPath)
 	if path == "" {
 		var err error
 		path, err = os.UserHomeDir()
 		if err != nil {
-			http.Error(w, "resolve home directory: "+err.Error(), http.StatusInternalServerError)
-			return
+			return nil, fmt.Errorf("resolve home directory: %w", err)
 		}
 	}
 	path, err := filepath.Abs(filepath.Clean(path))
 	if err != nil {
-		http.Error(w, "invalid directory path", http.StatusBadRequest)
-		return
+		return nil, errors.New("invalid directory path")
 	}
 	info, err := os.Stat(path)
-	if err != nil {
-		http.Error(w, "directory not found", http.StatusBadRequest)
-		return
-	}
-	if !info.IsDir() {
-		http.Error(w, "path is not a directory", http.StatusBadRequest)
-		return
+	if err != nil || !info.IsDir() {
+		return nil, errors.New("directory not found")
 	}
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		http.Error(w, "read directory: "+err.Error(), http.StatusForbidden)
-		return
+		return nil, fmt.Errorf("read directory: %w", err)
 	}
 	directories := make([]directoryEntry, 0, len(entries))
 	for _, entry := range entries {
 		child := filepath.Join(path, entry.Name())
 		childInfo, err := os.Stat(child)
-		if err != nil || !childInfo.IsDir() {
-			continue
+		if err == nil && childInfo.IsDir() {
+			directories = append(directories, directoryEntry{Name: entry.Name(), Path: child})
 		}
-		directories = append(directories, directoryEntry{Name: entry.Name(), Path: child})
 	}
 	parent := filepath.Dir(path)
 	if parent == path {
 		parent = ""
 	}
-	writeJSON(w, map[string]any{"path": path, "parent": parent, "directories": directories})
+	return map[string]any{"path": path, "parent": parent, "directories": directories}, nil
 }
 
-func (s *Server) uploadFile(w http.ResponseWriter, r *http.Request) {
-	name := filepath.Base(strings.TrimSpace(r.URL.Query().Get("name")))
+func (s *Server) saveUpload(name string, data []byte) (map[string]any, error) {
+	name = filepath.Base(strings.TrimSpace(name))
 	if name == "." || name == "" {
-		http.Error(w, "name is required", http.StatusBadRequest)
-		return
+		return nil, errors.New("name is required")
 	}
-	if r.ContentLength > maxUploadSize {
-		http.Error(w, "file is too large", http.StatusRequestEntityTooLarge)
-		return
+	if len(data) == 0 || len(data) > maxUploadSize {
+		return nil, errors.New("invalid file size")
 	}
 	extension := filepath.Ext(name)
 	if len(extension) > 16 {
@@ -303,35 +170,28 @@ func (s *Server) uploadFile(w http.ResponseWriter, r *http.Request) {
 	}
 	file, err := os.CreateTemp("", "codex-remote-*"+extension)
 	if err != nil {
-		http.Error(w, "create upload: "+err.Error(), http.StatusInternalServerError)
-		return
+		return nil, fmt.Errorf("create upload: %w", err)
 	}
 	path := file.Name()
-	written, copyErr := io.Copy(file, io.LimitReader(r.Body, maxUploadSize+1))
-	if written == 0 || written > maxUploadSize || copyErr != nil {
+	if _, err := file.Write(data); err != nil {
 		_ = file.Close()
 		_ = os.Remove(path)
-		if written > maxUploadSize {
-			http.Error(w, "file is too large", http.StatusRequestEntityTooLarge)
-		} else {
-			http.Error(w, "invalid file", http.StatusBadRequest)
-		}
-		return
+		return nil, fmt.Errorf("save upload: %w", err)
 	}
-	header := make([]byte, 512)
-	_, _ = file.Seek(0, io.SeekStart)
-	n, _ := file.Read(header)
+	header := data
+	if len(header) > 512 {
+		header = header[:512]
+	}
 	if err := file.Close(); err != nil {
 		_ = os.Remove(path)
-		http.Error(w, "save upload: "+err.Error(), http.StatusInternalServerError)
-		return
+		return nil, fmt.Errorf("save upload: %w", err)
 	}
-	image := strings.HasPrefix(http.DetectContentType(header[:n]), "image/") ||
+	image := strings.HasPrefix(http.DetectContentType(header), "image/") ||
 		strings.Contains(" .heic .heif .webp ", " "+strings.ToLower(extension)+" ")
 	s.uploadMu.Lock()
 	s.uploads[path] = image
 	s.uploadMu.Unlock()
-	writeJSON(w, map[string]any{"path": path, "image": image})
+	return map[string]any{"path": path, "image": image}, nil
 }
 
 func (s *Server) userInput(request turnRequest) ([]map[string]string, error) {
@@ -367,90 +227,6 @@ func (s *Server) userInput(request turnRequest) ([]map[string]string, error) {
 	return append([]map[string]string{{"type": "text", "text": text}}, input...), nil
 }
 
-type requestError struct{ err error }
-
-func decodeBody(r *http.Request, target any) error {
-	decoder := json.NewDecoder(io.LimitReader(r.Body, 32<<10))
-	decoder.DisallowUnknownFields()
-	return decoder.Decode(target)
-}
-
-func callAppServer(appServer AppServer, method string, params func(*http.Request) any) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if appServer == nil {
-			http.Error(w, "app-server is not running", http.StatusServiceUnavailable)
-			return
-		}
-		value := params(r)
-		if request, ok := value.(requestError); ok {
-			http.Error(w, request.err.Error(), http.StatusBadRequest)
-			return
-		}
-		result, err := appServer.Call(r.Context(), method, value)
-		if err != nil {
-			writeAppServerError(w, err)
-			return
-		}
-		writeRawJSON(w, result)
-	})
-}
-
-func releaseThread(appServer AppServer) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if appServer == nil {
-			http.Error(w, "app-server is not running", http.StatusServiceUnavailable)
-			return
-		}
-		released, err := appServer.ReleaseThread(r.Context(), r.PathValue("threadID"))
-		if err != nil {
-			writeAppServerError(w, err)
-			return
-		}
-		writeJSON(w, map[string]bool{"released": released})
-	})
-}
-
-func takeOverThread(appServer AppServer) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if appServer == nil {
-			http.Error(w, "app-server is not running", http.StatusServiceUnavailable)
-			return
-		}
-		result, err := appServer.TakeOverThread(r.Context(), r.PathValue("threadID"))
-		if err != nil {
-			writeAppServerError(w, err)
-			return
-		}
-		writeRawJSON(w, result)
-	})
-}
-
-func respondApproval(appServer AppServer) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if appServer == nil {
-			http.Error(w, "app-server is not running", http.StatusServiceUnavailable)
-			return
-		}
-		requestID, err := strconv.ParseInt(r.PathValue("requestID"), 10, 64)
-		if err != nil {
-			http.Error(w, "invalid approval request id", http.StatusBadRequest)
-			return
-		}
-		var request struct {
-			Decision json.RawMessage `json:"decision"`
-		}
-		if err := decodeBody(r, &request); err != nil || !validApprovalDecision(request.Decision) {
-			http.Error(w, "invalid approval decision", http.StatusBadRequest)
-			return
-		}
-		if err := appServer.Respond(requestID, map[string]json.RawMessage{"decision": request.Decision}, nil); err != nil {
-			writeAppServerError(w, err)
-			return
-		}
-		w.WriteHeader(http.StatusNoContent)
-	})
-}
-
 func validApprovalDecision(raw json.RawMessage) bool {
 	raw = json.RawMessage(strings.TrimSpace(string(raw)))
 	if len(raw) == 0 || bytesEqual(raw, []byte("null")) {
@@ -479,43 +255,6 @@ func validApprovalDecision(raw json.RawMessage) bool {
 }
 
 func bytesEqual(left, right []byte) bool { return string(left) == string(right) }
-
-func writeRawJSON(w http.ResponseWriter, data json.RawMessage) {
-	w.Header().Set("Content-Type", "application/json")
-	if len(data) == 0 {
-		data = []byte("{}")
-	}
-	_, _ = w.Write(data)
-}
-
-func writeAppServerError(w http.ResponseWriter, err error) {
-	if rpcError, ok := errors.AsType[*appserver.RPCError](err); ok {
-		status := http.StatusConflict
-		if rpcError.Code == -32001 {
-			status = http.StatusTooManyRequests
-		}
-		http.Error(w, rpcError.Error(), status)
-		return
-	}
-	http.Error(w, err.Error(), http.StatusBadGateway)
-}
-
-func authenticate(store *devices.Store, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := r.Context().Value(authenticatedDeviceKey{}).(devices.Device); !ok {
-			device, ok := authenticateDevice(store, r.Header.Get("Authorization"))
-			if !ok {
-				w.Header().Set("WWW-Authenticate", "Bearer")
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
-				return
-			}
-			disconnect := store.Connect(device.ID)
-			defer disconnect()
-			r = r.WithContext(context.WithValue(r.Context(), authenticatedDeviceKey{}, device))
-		}
-		next.ServeHTTP(w, r)
-	})
-}
 
 func writeJSON(w http.ResponseWriter, value any) {
 	w.Header().Set("Content-Type", "application/json")
