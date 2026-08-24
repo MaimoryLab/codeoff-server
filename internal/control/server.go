@@ -111,6 +111,23 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 			"input":    []map[string]string{{"type": "text", "text": request.Input}},
 		}
 	})))
+	mux.Handle("POST /api/v1/turns/{turnID}/steer", authenticate(deviceStore, callAppServer(appServer, "turn/steer", func(r *http.Request) any {
+		var request struct {
+			Input string `json:"input"`
+		}
+		if err := decodeBody(r, &request); err != nil {
+			return requestError{err}
+		}
+		threadID := r.URL.Query().Get("threadId")
+		if threadID == "" || strings.TrimSpace(request.Input) == "" {
+			return requestError{errors.New("threadId and input are required")}
+		}
+		return map[string]any{
+			"threadId":       threadID,
+			"expectedTurnId": r.PathValue("turnID"),
+			"input":          []map[string]string{{"type": "text", "text": request.Input}},
+		}
+	})))
 	mux.Handle("POST /api/v1/turns/{turnID}/interrupt", authenticate(deviceStore, callAppServer(appServer, "turn/interrupt", func(r *http.Request) any {
 		return map[string]string{"threadId": r.URL.Query().Get("threadId"), "turnId": r.PathValue("turnID")}
 	})))
@@ -247,9 +264,12 @@ func writeRawJSON(w http.ResponseWriter, data json.RawMessage) {
 }
 
 func writeAppServerError(w http.ResponseWriter, err error) {
-	var rpcError *appserver.RPCError
-	if errors.As(err, &rpcError) && rpcError.Code == -32001 {
-		http.Error(w, rpcError.Error(), http.StatusTooManyRequests)
+	if rpcError, ok := errors.AsType[*appserver.RPCError](err); ok {
+		status := http.StatusConflict
+		if rpcError.Code == -32001 {
+			status = http.StatusTooManyRequests
+		}
+		http.Error(w, rpcError.Error(), status)
 		return
 	}
 	http.Error(w, err.Error(), http.StatusBadGateway)

@@ -184,6 +184,59 @@ func TestResumeThreadForwardsThreadID(t *testing.T) {
 	}
 }
 
+func TestSteerTurnForwardsActiveTurn(t *testing.T) {
+	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pairing, err := store.NewPairing()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fake := new(fakeApprovalServer)
+	server := New(func(context.Context) diagnostics.Snapshot { return diagnostics.Snapshot{} }, store, fake)
+	httpServer := httptest.NewServer(server.httpServer.Handler)
+	t.Cleanup(httpServer.Close)
+
+	pairBody, _ := json.Marshal(map[string]string{"token": pairing.Token, "name": "Phone"})
+	pairResponse, err := http.Post(httpServer.URL+"/api/v1/pair/exchange", "application/json", bytes.NewReader(pairBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pairResponse.Body.Close()
+	var exchange struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(pairResponse.Body).Decode(&exchange); err != nil {
+		t.Fatal(err)
+	}
+
+	request, _ := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/turns/turn-7/steer?threadId=thread-42", bytes.NewReader([]byte(`{"input":"continue"}`)))
+	request.Header.Set("Authorization", "Bearer "+exchange.Token)
+	request.Header.Set("Content-Type", "application/json")
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("steer status = %d", response.StatusCode)
+	}
+	params, ok := fake.params.(map[string]any)
+	input, inputOK := params["input"].([]map[string]string)
+	if fake.method != "turn/steer" || !ok || !inputOK || params["threadId"] != "thread-42" || params["expectedTurnId"] != "turn-7" || len(input) != 1 || input[0]["text"] != "continue" {
+		t.Fatalf("method = %q, params = %#v", fake.method, fake.params)
+	}
+}
+
+func TestAppServerRPCErrorIsConflict(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	writeAppServerError(recorder, &appserver.RPCError{Code: -32600, Message: "turn already active"})
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("status = %d", recorder.Code)
+	}
+}
+
 func TestReadThreadIncludesTurns(t *testing.T) {
 	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
 	if err != nil {
