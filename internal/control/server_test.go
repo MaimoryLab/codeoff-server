@@ -164,7 +164,7 @@ func TestThreadActionsForwardThreadID(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for _, action := range []string{"resume", "unsubscribe"} {
+	for _, action := range []string{"resume", "unsubscribe", "archive"} {
 		t.Run(action, func(t *testing.T) {
 			request, _ := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/threads/thread-42/"+action, bytes.NewReader([]byte(`{}`)))
 			request.Header.Set("Authorization", "Bearer "+exchange.Token)
@@ -186,6 +186,23 @@ func TestThreadActionsForwardThreadID(t *testing.T) {
 			}
 		})
 	}
+	t.Run("name", func(t *testing.T) {
+		request, _ := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/threads/thread-42/name", bytes.NewReader([]byte(`{"name":"Renamed"}`)))
+		request.Header.Set("Authorization", "Bearer "+exchange.Token)
+		request.Header.Set("Content-Type", "application/json")
+		response, err := http.DefaultClient.Do(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer response.Body.Close()
+		if response.StatusCode != http.StatusOK {
+			t.Fatalf("status = %d", response.StatusCode)
+		}
+		params, ok := fake.params.(map[string]string)
+		if fake.method != "thread/name/set" || !ok || params["threadId"] != "thread-42" || params["name"] != "Renamed" {
+			t.Fatalf("method = %q, params = %#v", fake.method, fake.params)
+		}
+	})
 }
 
 func TestSteerTurnForwardsActiveTurn(t *testing.T) {
