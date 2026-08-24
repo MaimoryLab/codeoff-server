@@ -12,7 +12,7 @@
         <div><p class="eyebrow">LOCAL CONTROL</p><h1>Codex Remote</h1></div>
         <button id="refresh" class="button" type="button">Refresh</button>
     </header>
-    <p id="message" class="notice muted">Checking local environment...</p>
+    <p id="message" class="notice muted"></p>
     <div id="dashboard" class="dashboard">
         <section class="panel installed-only" aria-labelledby="app-server-title">
             <div class="panel-heading"><div><p class="eyebrow">RUNTIME</p><h2 id="app-server-title">Codex app-server</h2></div><div class="service-action"><strong id="app-server-state" class="state-offline">Offline</strong><button id="toggle-app-server" class="button secondary" type="button">Start</button></div></div>
@@ -25,7 +25,7 @@
             <p id="tunnel-detail" class="muted">Stopped</p>
             <div id="tunnel-address" class="copy-field" hidden><span id="tunnel-address-value">-</span><button id="copy-tunnel" class="mini-button" type="button">Copy</button></div>
         </section>
-        <section class="panel installed-only" aria-labelledby="devices-title">
+        <section class="panel installed-only devices-panel" aria-labelledby="devices-title">
             <div class="panel-heading"><div><p class="eyebrow">DEVICES</p><h2 id="devices-title">Bound devices</h2></div><button id="bind-device" class="button secondary" type="button">Bind new device</button></div>
             <div id="pairing-code" hidden><p id="pairing-expiry" class="muted"></p><div class="copy-field"><span id="pairing-value"></span><button id="copy-pairing" class="mini-button" type="button">Copy</button></div></div>
             <ul id="device-list" class="device-list"><li class="muted">No devices bound</li></ul>
@@ -35,7 +35,6 @@
             <div class="tool-list" aria-label="Local tools">
                 <div class="tool-row"><div><span>Node.js</span><strong id="tool-node" class="tool-status">Checking</strong></div><button id="install-node" class="mini-button" type="button">Install</button></div>
                 <div class="tool-row"><div><span>Codex CLI</span><strong id="tool-codex" class="tool-status">Checking</strong></div><button id="install-codex" class="mini-button" type="button">Install</button></div>
-                <div class="tool-row"><div><span>App server</span><strong id="tool-app-server" class="tool-status">Checking</strong></div></div>
                 <div class="tool-row"><div><span>Cloudflared</span><strong id="tool-cloudflared" class="tool-status">Checking</strong></div><button id="install-cloudflared" class="mini-button" type="button">Install</button></div>
             </div>
         </section>

@@ -39,8 +39,8 @@ func main() {
 
 	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "Codex Remote",
-		Width:            1000,
-		Height:           700,
+		Width:            900,
+		Height:           600,
 		BackgroundColour: application.NewRGB(16, 18, 24),
 		URL:              "/",
 	})

@@ -54,7 +54,6 @@ type Device = { id: string; name: string; createdAt: string; lastSeen: string; c
 const tools: Record<string, HTMLElement> = {
     node: document.querySelector<HTMLElement>("#tool-node")!,
     codex: document.querySelector<HTMLElement>("#tool-codex")!,
-    appServer: document.querySelector<HTMLElement>("#tool-app-server")!,
     cloudflared: document.querySelector<HTMLElement>("#tool-cloudflared")!,
 };
 
@@ -68,7 +67,6 @@ function render(snapshot: Snapshot) {
     checkedAt.textContent = `Checked ${new Date(snapshot.checkedAt).toLocaleTimeString()}`;
     renderTool(tools.node, snapshot.node);
     renderTool(tools.codex, snapshot.codex);
-    renderTool(tools.appServer, snapshot.appServer);
     renderTool(tools.cloudflared, snapshot.cloudflared);
     dashboard.classList.toggle("ready", snapshot.node.installed && snapshot.codex.installed);
     installNodeButton.disabled = false;
@@ -78,7 +76,7 @@ function render(snapshot: Snapshot) {
     installCloudflaredButton.disabled = false;
     installCloudflaredButton.textContent = snapshot.cloudflared.installed ? "Upgrade" : "Install";
     cloudflaredInstalled = snapshot.cloudflared.installed;
-    message.textContent = "Environment check complete";
+    message.textContent = "";
 }
 
 function renderAppServer(state: RuntimeState, address = controlAddr) {
