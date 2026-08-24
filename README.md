@@ -26,6 +26,7 @@ The current desktop panel checks `node`, `codex`, `codex app-server`, and `cloud
 ```text
 GET /healthz
 GET /api/v1/status
+GET /api/v1/directories?path=/path/on/server
 POST /api/v1/pair/exchange
 GET /api/v1/threads
 POST /api/v1/threads
