@@ -2,6 +2,7 @@ package control
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net"
 	"net/http"
@@ -120,6 +121,59 @@ func TestPairExchangeAndWebSocketStatus(t *testing.T) {
 	}
 	if result.ID != 2 || result.Result["ack"] != true {
 		t.Fatalf("heartbeat response = %#v", result)
+	}
+}
+
+func TestWebSocketAcceptsMaximumUploadMessage(t *testing.T) {
+	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pairing, err := store.NewPairing()
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := New(func(context.Context) diagnostics.Snapshot { return diagnostics.Snapshot{} }, store)
+	httpServer := httptest.NewServer(server.httpServer.Handler)
+	t.Cleanup(httpServer.Close)
+	body, _ := json.Marshal(map[string]string{"token": pairing.Token, "name": "Phone"})
+	response, err := http.Post(httpServer.URL+"/api/v1/pair/exchange", "application/json", strings.NewReader(string(body)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var exchange struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&exchange); err != nil {
+		t.Fatal(err)
+	}
+	_ = response.Body.Close()
+	wsURL, _ := url.Parse(httpServer.URL)
+	wsURL.Scheme, wsURL.Path = "ws", "/api/v1/ws"
+	conn, _, err := websocket.Dial(context.Background(), wsURL.String(), &websocket.DialOptions{
+		HTTPHeader: http.Header{"Authorization": []string{"Bearer " + exchange.Token}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = conn.Close(websocket.StatusNormalClosure, "") })
+	data := strings.Repeat("a", maxUploadSize)
+	if err := wsjson.Write(context.Background(), conn, map[string]any{
+		"id": 1, "method": "upload", "params": map[string]string{
+			"name": "large.txt", "data": base64.StdEncoding.EncodeToString([]byte(data)),
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var result struct {
+		ID     int            `json:"id"`
+		Result map[string]any `json:"result"`
+	}
+	if err := wsjson.Read(context.Background(), conn, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.ID != 1 || result.Result["path"] == nil {
+		t.Fatalf("upload response = %#v", result)
 	}
 }
 

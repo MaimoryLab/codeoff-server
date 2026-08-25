@@ -52,6 +52,7 @@ func websocketHandler(server *Server, store *devices.Store, appServer AppServer,
 		if err != nil {
 			return
 		}
+		conn.SetReadLimit(maxUploadSize*4/3 + 1<<20)
 		defer conn.Close(websocket.StatusNormalClosure, "")
 		disconnect := store.Connect(device.ID)
 		defer disconnect()
