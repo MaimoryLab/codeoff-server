@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -40,11 +41,13 @@ type AppService struct {
 }
 
 type Overview struct {
-	Environment diagnostics.Snapshot `json:"environment"`
-	AppServer   appserver.State      `json:"appServer"`
-	Tunnel      tunnel.State         `json:"tunnel"`
-	ControlAddr string               `json:"controlAddr"`
-	ListenAddr  string               `json:"listenAddr"`
+	Environment  diagnostics.Snapshot `json:"environment"`
+	AppServer    appserver.State      `json:"appServer"`
+	Tunnel       tunnel.State         `json:"tunnel"`
+	ControlAddr  string               `json:"controlAddr"`
+	ControlAddrs []string             `json:"controlAddrs"`
+	ListenAddr   string               `json:"listenAddr"`
+	ServerUUID   string               `json:"serverUuid"`
 }
 
 func NewAppService() (*AppService, error) {
@@ -76,14 +79,40 @@ func (s *AppService) RevokeDevice(id string) error { return s.devices.Revoke(id)
 
 func (s *AppService) Overview() Overview {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
+	status, controlAddr, listenAddr := s.status, s.controlAddr, s.listenAddr
+	s.mu.RUnlock()
 	return Overview{
-		Environment: s.status,
-		AppServer:   s.appServer.State(),
-		Tunnel:      s.tunnel.State(),
-		ControlAddr: s.controlAddr,
-		ListenAddr:  s.listenAddr,
+		Environment:  status,
+		AppServer:    s.appServer.State(),
+		Tunnel:       s.tunnel.State(),
+		ControlAddr:  controlAddr,
+		ControlAddrs: controlAddresses(listenAddr),
+		ListenAddr:   listenAddr,
+		ServerUUID:   s.devices.Server().ID,
 	}
+}
+
+func controlAddresses(address string) []string {
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return nil
+	}
+	if host != "0.0.0.0" {
+		return []string{"http://" + net.JoinHostPort(host, port)}
+	}
+	interfaceAddresses, err := net.InterfaceAddrs()
+	if err != nil {
+		return nil
+	}
+	addresses := make([]string, 0, len(interfaceAddresses))
+	for _, address := range interfaceAddresses {
+		ip, _, err := net.ParseCIDR(address.String())
+		if err == nil && ip.To4() != nil {
+			addresses = append(addresses, "http://"+net.JoinHostPort(ip.String(), port))
+		}
+	}
+	slices.Sort(addresses)
+	return slices.Compact(addresses)
 }
 
 func (s *AppService) startControlServer() error {

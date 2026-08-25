@@ -1,7 +1,9 @@
 package main
 
 import (
+	"net"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -21,6 +23,32 @@ func TestListenAddrSettings(t *testing.T) {
 	if _, err := validateListenAddr("localhost:11037"); err == nil {
 		t.Fatal("hostname should be rejected")
 	}
+}
+
+func TestControlAddresses(t *testing.T) {
+	if got := controlAddresses("127.0.0.1:11037"); !slices.Equal(got, []string{"http://127.0.0.1:11037"}) {
+		t.Fatalf("control addresses = %v", got)
+	}
+
+	want := make([]string, 0)
+	for _, address := range must(net.InterfaceAddrs()) {
+		ip, _, err := net.ParseCIDR(address.String())
+		if err == nil && ip.To4() != nil {
+			want = append(want, "http://"+net.JoinHostPort(ip.String(), "11037"))
+		}
+	}
+	slices.Sort(want)
+	want = slices.Compact(want)
+	if got := controlAddresses("0.0.0.0:11037"); !slices.Equal(got, want) {
+		t.Fatalf("control addresses = %v, want %v", got, want)
+	}
+}
+
+func must[T any](value T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return value
 }
 
 func TestServiceStatus(t *testing.T) {
