@@ -24,6 +24,12 @@ func TestSettings(t *testing.T) {
 	if _, err := validateListenAddr("localhost:11037"); err == nil {
 		t.Fatal("hostname should be rejected")
 	}
+	if got, err := validateTunnelURL(" https://remote.example.com/ "); err != nil || got != "https://remote.example.com" {
+		t.Fatalf("tunnel URL = %q, %v", got, err)
+	}
+	if _, err := validateTunnelURL("https://remote.example.com/app"); err == nil {
+		t.Fatal("tunnel URL path should be rejected")
+	}
 }
 
 func TestControlAddresses(t *testing.T) {

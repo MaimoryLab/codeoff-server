@@ -18,6 +18,7 @@ type State struct {
 	Running   bool      `json:"running"`
 	Starting  bool      `json:"starting"`
 	Stopping  bool      `json:"stopping"`
+	External  bool      `json:"external,omitempty"`
 	URL       string    `json:"url,omitempty"`
 	StartedAt time.Time `json:"startedAt"`
 	Error     string    `json:"error,omitempty"`

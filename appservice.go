@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"slices"
@@ -48,6 +49,7 @@ type settings struct {
 	ListenAddr       string `json:"listenAddr"`
 	AppServerEnabled bool   `json:"appServerEnabled"`
 	TunnelEnabled    bool   `json:"tunnelEnabled"`
+	TunnelURL        string `json:"tunnelUrl,omitempty"`
 	PreventSleep     bool   `json:"preventSleep"`
 }
 
@@ -102,7 +104,7 @@ func (s *AppService) Overview() Overview {
 	return Overview{
 		Environment:  status,
 		AppServer:    s.appServer.State(),
-		Tunnel:       s.tunnel.State(),
+		Tunnel:       s.TunnelState(),
 		ControlAddr:  controlAddr,
 		ControlAddrs: controlAddresses(listenAddr),
 		ListenAddr:   listenAddr,
@@ -241,7 +243,30 @@ func (s *AppService) Shutdown() error {
 	return errors.Join(s.tunnel.Stop(), s.appServer.Stop(), s.keepAwake.Set(false), controlErr)
 }
 
-func (s *AppService) TunnelState() tunnel.State { return s.tunnel.State() }
+func (s *AppService) TunnelState() tunnel.State {
+	state := s.tunnel.State()
+	s.mu.RLock()
+	configuredURL := s.settings.TunnelURL
+	s.mu.RUnlock()
+	if configuredURL != "" && !state.Running && !state.Starting && !state.Stopping {
+		state.External = true
+		state.URL = configuredURL
+	}
+	return state
+}
+
+func (s *AppService) SetTunnelURL(raw string) (tunnel.State, error) {
+	configuredURL, err := validateTunnelURL(raw)
+	if err != nil {
+		return s.TunnelState(), err
+	}
+	stopErr := s.tunnel.Stop()
+	settingsErr := s.updateSettings(func(settings *settings) {
+		settings.TunnelURL = configuredURL
+		settings.TunnelEnabled = false
+	})
+	return s.TunnelState(), errors.Join(stopErr, settingsErr)
+}
 
 func (s *AppService) StartTunnel() (tunnel.State, error) {
 	settingsErr := s.updateSettings(func(settings *settings) { settings.TunnelEnabled = true })
@@ -250,6 +275,12 @@ func (s *AppService) StartTunnel() (tunnel.State, error) {
 }
 
 func (s *AppService) startTunnel() (tunnel.State, error) {
+	s.mu.RLock()
+	configuredURL := s.settings.TunnelURL
+	s.mu.RUnlock()
+	if configuredURL != "" {
+		return s.TunnelState(), nil
+	}
 	status := s.RefreshStatus()
 	if !status.Cloudflared.Installed {
 		return s.tunnel.State(), errors.New("cloudflared is not installed")
@@ -409,4 +440,16 @@ func validateListenAddr(address string) (string, error) {
 		return "", errors.New("listen address must be an IPv4 address and port, for example 127.0.0.1:11037")
 	}
 	return net.JoinHostPort(host, portText), nil
+}
+
+func validateTunnelURL(raw string) (string, error) {
+	value := strings.TrimRight(strings.TrimSpace(raw), "/")
+	if value == "" {
+		return "", nil
+	}
+	parsed, err := url.ParseRequestURI(value)
+	if err != nil || parsed.Hostname() == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Path != "" || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", errors.New("tunnel URL must be an http(s) origin without a path")
+	}
+	return value, nil
 }

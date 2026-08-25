@@ -70,6 +70,10 @@ export function SetListenAddr(address: string): $CancellablePromise<$models.Over
     return $Call.ByID(572607266, address);
 }
 
+export function SetTunnelURL(raw: string): $CancellablePromise<tunnel$0.State> {
+    return $Call.ByID(2746897373, raw);
+}
+
 export function Shutdown(): $CancellablePromise<void> {
     return $Call.ByID(780008012);
 }
