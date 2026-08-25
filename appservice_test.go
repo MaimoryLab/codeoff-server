@@ -7,18 +7,19 @@ import (
 	"testing"
 )
 
-func TestListenAddrSettings(t *testing.T) {
+func TestSettings(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "settings.json")
-	address, err := loadListenAddr(path)
-	if err != nil || address != defaultListenAddr {
-		t.Fatalf("default address = %q, %v", address, err)
+	loaded, err := loadSettings(path)
+	if err != nil || loaded.ListenAddr != defaultListenAddr {
+		t.Fatalf("default settings = %#v, %v", loaded, err)
 	}
-	if err := saveListenAddr(path, "0.0.0.0:12000"); err != nil {
+	want := settings{ListenAddr: "0.0.0.0:12000", AppServerEnabled: true, TunnelEnabled: true, PreventSleep: true}
+	if err := saveSettings(path, want); err != nil {
 		t.Fatal(err)
 	}
-	address, err = loadListenAddr(path)
-	if err != nil || address != "0.0.0.0:12000" {
-		t.Fatalf("saved address = %q, %v", address, err)
+	got, err := loadSettings(path)
+	if err != nil || got != want {
+		t.Fatalf("saved settings = %#v, %v", got, err)
 	}
 	if _, err := validateListenAddr("localhost:11037"); err == nil {
 		t.Fatal("hostname should be rejected")

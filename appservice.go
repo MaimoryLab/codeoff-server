@@ -37,7 +37,15 @@ type AppService struct {
 	control      *control.Server
 	listenAddr   string
 	settingsPath string
+	settings     settings
 	controlMu    sync.Mutex
+}
+
+type settings struct {
+	ListenAddr       string `json:"listenAddr"`
+	AppServerEnabled bool   `json:"appServerEnabled"`
+	TunnelEnabled    bool   `json:"tunnelEnabled"`
+	PreventSleep     bool   `json:"preventSleep"`
 }
 
 type Overview struct {
@@ -60,11 +68,11 @@ func NewAppService() (*AppService, error) {
 		return nil, err
 	}
 	settingsPath := filepath.Join(filepath.Dir(devicePath), "settings.json")
-	listenAddr, err := loadListenAddr(settingsPath)
+	loadedSettings, err := loadSettings(settingsPath)
 	if err != nil {
 		return nil, err
 	}
-	service := &AppService{appServer: appserver.NewManager(), devices: deviceStore, tunnel: tunnel.NewManager(), listenAddr: listenAddr, settingsPath: settingsPath}
+	service := &AppService{appServer: appserver.NewManager(), devices: deviceStore, tunnel: tunnel.NewManager(), listenAddr: loadedSettings.ListenAddr, settingsPath: settingsPath, settings: loadedSettings}
 	service.RefreshStatus()
 	return service, nil
 }
@@ -146,9 +154,12 @@ func (s *AppService) SetListenAddr(address string) (Overview, error) {
 	oldAddress, oldServer := s.listenAddr, s.control
 	s.mu.RUnlock()
 	if address == oldAddress {
-		return s.Overview(), saveListenAddr(s.settingsPath, address)
+		return s.Overview(), s.updateSettings(func(settings *settings) { settings.ListenAddr = address })
 	}
 	_ = s.tunnel.Stop()
+	if err := s.updateSettings(func(settings *settings) { settings.TunnelEnabled = false }); err != nil {
+		return s.Overview(), err
+	}
 	if oldServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		_ = oldServer.Close(ctx)
@@ -164,7 +175,7 @@ func (s *AppService) SetListenAddr(address string) (Overview, error) {
 	s.mu.Lock()
 	s.listenAddr = address
 	s.mu.Unlock()
-	if err := saveListenAddr(s.settingsPath, address); err != nil {
+	if err := s.updateSettings(func(settings *settings) { settings.ListenAddr = address }); err != nil {
 		return s.Overview(), err
 	}
 	return s.Overview(), nil
@@ -175,6 +186,12 @@ func (s *AppService) AppServerState() appserver.State {
 }
 
 func (s *AppService) StartAppServer() (appserver.State, error) {
+	settingsErr := s.updateSettings(func(settings *settings) { settings.AppServerEnabled = true })
+	state, err := s.startAppServer()
+	return state, errors.Join(settingsErr, err)
+}
+
+func (s *AppService) startAppServer() (appserver.State, error) {
 	status := s.RefreshStatus()
 	if !status.Codex.Installed {
 		return s.appServer.State(), errors.New("codex CLI is not installed")
@@ -185,17 +202,16 @@ func (s *AppService) StartAppServer() (appserver.State, error) {
 }
 
 func (s *AppService) StopAppServer() (appserver.State, error) {
-	if err := s.appServer.Stop(); err != nil {
-		return s.appServer.State(), err
-	}
-	return s.appServer.State(), nil
+	stopErr := s.appServer.Stop()
+	settingsErr := s.updateSettings(func(settings *settings) { settings.AppServerEnabled = false })
+	return s.appServer.State(), errors.Join(stopErr, settingsErr)
 }
 
 func (s *AppService) ToggleAppServer() (appserver.State, error) {
-	status := s.RefreshStatus()
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	return s.appServer.Toggle(ctx, status.Codex.Path)
+	if state := s.appServer.State(); state.Running || state.Starting {
+		return s.StopAppServer()
+	}
+	return s.StartAppServer()
 }
 
 func (s *AppService) Shutdown() error {
@@ -216,6 +232,12 @@ func (s *AppService) Shutdown() error {
 func (s *AppService) TunnelState() tunnel.State { return s.tunnel.State() }
 
 func (s *AppService) StartTunnel() (tunnel.State, error) {
+	settingsErr := s.updateSettings(func(settings *settings) { settings.TunnelEnabled = true })
+	state, err := s.startTunnel()
+	return state, errors.Join(settingsErr, err)
+}
+
+func (s *AppService) startTunnel() (tunnel.State, error) {
 	status := s.RefreshStatus()
 	if !status.Cloudflared.Installed {
 		return s.tunnel.State(), errors.New("cloudflared is not installed")
@@ -229,20 +251,30 @@ func (s *AppService) StartTunnel() (tunnel.State, error) {
 }
 
 func (s *AppService) StopTunnel() (tunnel.State, error) {
-	if err := s.tunnel.Stop(); err != nil {
-		return s.tunnel.State(), err
-	}
-	return s.tunnel.State(), nil
+	stopErr := s.tunnel.Stop()
+	settingsErr := s.updateSettings(func(settings *settings) { settings.TunnelEnabled = false })
+	return s.tunnel.State(), errors.Join(stopErr, settingsErr)
 }
 
 func (s *AppService) ToggleTunnel() (tunnel.State, error) {
-	status := s.RefreshStatus()
-	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
-	defer cancel()
+	if state := s.tunnel.State(); state.Running || state.Starting {
+		return s.StopTunnel()
+	}
+	return s.StartTunnel()
+}
+
+func (s *AppService) restore() error {
 	s.mu.RLock()
-	controlURL := s.controlURL
+	settings := s.settings
 	s.mu.RUnlock()
-	return s.tunnel.Toggle(ctx, status.Cloudflared.Path, controlURL)
+	var appServerErr, tunnelErr error
+	if settings.AppServerEnabled {
+		_, appServerErr = s.startAppServer()
+	}
+	if settings.TunnelEnabled {
+		_, tunnelErr = s.startTunnel()
+	}
+	return errors.Join(appServerErr, tunnelErr)
 }
 
 func (s *AppService) Status() diagnostics.Snapshot {
@@ -304,31 +336,35 @@ func (s *AppService) setProgress(message string) {
 	s.mu.Unlock()
 }
 
-func loadListenAddr(path string) (string, error) {
+func loadSettings(path string) (settings, error) {
+	loaded := settings{ListenAddr: defaultListenAddr}
 	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		return defaultListenAddr, nil
+		return loaded, nil
 	}
 	if err != nil {
-		return "", err
+		return loaded, err
 	}
-	var settings struct {
-		ListenAddr string `json:"listenAddr"`
+	if err := json.Unmarshal(data, &loaded); err != nil {
+		return loaded, fmt.Errorf("read settings: %w", err)
 	}
-	if err := json.Unmarshal(data, &settings); err != nil {
-		return "", fmt.Errorf("read settings: %w", err)
-	}
-	return validateListenAddr(settings.ListenAddr)
+	loaded.ListenAddr, err = validateListenAddr(loaded.ListenAddr)
+	return loaded, err
 }
 
-func saveListenAddr(path, address string) error {
+func saveSettings(path string, settings settings) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
-	data, _ := json.MarshalIndent(struct {
-		ListenAddr string `json:"listenAddr"`
-	}{address}, "", "  ")
+	data, _ := json.MarshalIndent(settings, "", "  ")
 	return os.WriteFile(path, data, 0o600)
+}
+
+func (s *AppService) updateSettings(update func(*settings)) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	update(&s.settings)
+	return saveSettings(s.settingsPath, s.settings)
 }
 
 func validateListenAddr(address string) (string, error) {

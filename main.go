@@ -24,6 +24,9 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Printf("control API listening on %s", service.Overview().ControlAddr)
+	if err := service.restore(); err != nil {
+		log.Printf("restore services: %v", err)
+	}
 
 	app := application.New(application.Options{
 		Name:        "Codex Remote",
