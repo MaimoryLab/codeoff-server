@@ -82,6 +82,13 @@ func main() {
 		updateTrayMenu()
 	})
 	menu.AddSeparator()
+	preventSleep := menu.AddCheckbox("防止系统休眠", service.preventSleepEnabled()).OnClick(func(ctx *application.Context) {
+		if err := service.setPreventSleep(ctx.ClickedMenuItem().Checked()); err != nil {
+			log.Printf("set prevent sleep: %v", err)
+		}
+		updateTrayMenu()
+	})
+	menu.AddSeparator()
 	menu.Add("打开控制面板").OnClick(func(*application.Context) { window.Show().Focus() })
 	menu.Add("退出").OnClick(func(*application.Context) { app.Quit() })
 	menu.AddSeparator()
@@ -94,6 +101,7 @@ func main() {
 		tunnelStatus.SetLabel("CF Tunnel：" + serviceStatus(overview.Environment.Cloudflared.Installed, overview.Tunnel.Running, overview.Tunnel.Starting, overview.Tunnel.Stopping))
 		tunnelAddress.SetLabel(overview.Tunnel.URL).SetHidden(!overview.Tunnel.Running)
 		tunnelToggle.SetLabel(toggleLabel(overview.Tunnel.Running || overview.Tunnel.Starting)).SetEnabled(overview.Environment.Cloudflared.Installed && !overview.Tunnel.Starting && !overview.Tunnel.Stopping)
+		preventSleep.SetChecked(service.preventSleepEnabled())
 	}
 	updateTrayMenu()
 

@@ -32,6 +32,7 @@ type Manager struct {
 	start       startClient
 	executable  string
 	terminate   func(context.Context, string, string) error
+	onStopped   func()
 }
 
 func NewManager() *Manager {
@@ -110,6 +111,12 @@ func (m *Manager) Stop() error {
 	m.operationMu.Lock()
 	defer m.operationMu.Unlock()
 	return m.stopLocked()
+}
+
+func (m *Manager) SetOnStopped(callback func()) {
+	m.mu.Lock()
+	m.onStopped = callback
+	m.mu.Unlock()
 }
 
 func (m *Manager) stopLocked() error {
@@ -303,14 +310,19 @@ func (m *Manager) watch(client *Client) {
 		}
 	}
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	if m.client != client {
+		m.mu.Unlock()
 		return
 	}
 	m.client, m.cancel = nil, nil
 	m.state.Running = false
 	if err := client.Err(); err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, io.EOF) {
 		m.state.Error = err.Error()
+	}
+	callback := m.onStopped
+	m.mu.Unlock()
+	if callback != nil {
+		callback()
 	}
 }
 
@@ -323,5 +335,9 @@ func (m *Manager) fail(err error) State {
 func (m *Manager) setState(state State) {
 	m.mu.Lock()
 	m.state = state
+	callback := m.onStopped
 	m.mu.Unlock()
+	if !state.Running && !state.Starting && !state.Stopping && callback != nil {
+		callback()
+	}
 }

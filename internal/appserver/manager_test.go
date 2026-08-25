@@ -24,11 +24,13 @@ func (t *blockingTransport) Close() error {
 }
 
 func TestManagerStartAndStop(t *testing.T) {
+	var stopped atomic.Int32
 	manager := newManager(func(context.Context, string, ...string) (*Client, error) {
 		clientTransport, serverTransport := net.Pipe()
 		go serveInitialize(serverTransport)
 		return New(clientTransport), nil
 	})
+	manager.SetOnStopped(func() { stopped.Add(1) })
 
 	state, err := manager.Toggle(context.Background(), "codex")
 	if err != nil {
@@ -43,6 +45,9 @@ func TestManagerStartAndStop(t *testing.T) {
 	}
 	if state.Running {
 		t.Fatal("manager still running after stop")
+	}
+	if stopped.Load() != 1 {
+		t.Fatalf("stopped callback called %d times", stopped.Load())
 	}
 }
 

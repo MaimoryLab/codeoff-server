@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/MaimoryLab/codex-server/internal/appserver"
+	"github.com/MaimoryLab/codex-server/internal/awake"
 	"github.com/MaimoryLab/codex-server/internal/control"
 	"github.com/MaimoryLab/codex-server/internal/devices"
 	"github.com/MaimoryLab/codex-server/internal/diagnostics"
@@ -30,6 +32,7 @@ type AppService struct {
 	status       diagnostics.Snapshot
 	progress     string
 	appServer    *appserver.Manager
+	keepAwake    *awake.Inhibitor
 	devices      *devices.Store
 	tunnel       *tunnel.Manager
 	controlURL   string
@@ -72,7 +75,14 @@ func NewAppService() (*AppService, error) {
 	if err != nil {
 		return nil, err
 	}
-	service := &AppService{appServer: appserver.NewManager(), devices: deviceStore, tunnel: tunnel.NewManager(), listenAddr: loadedSettings.ListenAddr, settingsPath: settingsPath, settings: loadedSettings}
+	manager := appserver.NewManager()
+	keepAwake := awake.New()
+	service := &AppService{appServer: manager, keepAwake: keepAwake, devices: deviceStore, tunnel: tunnel.NewManager(), listenAddr: loadedSettings.ListenAddr, settingsPath: settingsPath, settings: loadedSettings}
+	manager.SetOnStopped(func() {
+		if err := service.syncPreventSleep(); err != nil {
+			log.Printf("sync sleep inhibitor: %v", err)
+		}
+	})
 	service.RefreshStatus()
 	return service, nil
 }
@@ -198,13 +208,15 @@ func (s *AppService) startAppServer() (appserver.State, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	return s.appServer.Start(ctx, status.Codex.Path)
+	state, err := s.appServer.Start(ctx, status.Codex.Path)
+	return state, errors.Join(err, s.syncPreventSleep())
 }
 
 func (s *AppService) StopAppServer() (appserver.State, error) {
 	stopErr := s.appServer.Stop()
+	awakeErr := s.keepAwake.Set(false)
 	settingsErr := s.updateSettings(func(settings *settings) { settings.AppServerEnabled = false })
-	return s.appServer.State(), errors.Join(stopErr, settingsErr)
+	return s.appServer.State(), errors.Join(stopErr, awakeErr, settingsErr)
 }
 
 func (s *AppService) ToggleAppServer() (appserver.State, error) {
@@ -226,7 +238,7 @@ func (s *AppService) Shutdown() error {
 		controlErr = server.Close(ctx)
 		cancel()
 	}
-	return errors.Join(s.tunnel.Stop(), s.appServer.Stop(), controlErr)
+	return errors.Join(s.tunnel.Stop(), s.appServer.Stop(), s.keepAwake.Set(false), controlErr)
 }
 
 func (s *AppService) TunnelState() tunnel.State { return s.tunnel.State() }
@@ -275,6 +287,28 @@ func (s *AppService) restore() error {
 		_, tunnelErr = s.startTunnel()
 	}
 	return errors.Join(appServerErr, tunnelErr)
+}
+
+func (s *AppService) preventSleepEnabled() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.settings.PreventSleep
+}
+
+func (s *AppService) setPreventSleep(enabled bool) error {
+	settingsErr := s.updateSettings(func(settings *settings) { settings.PreventSleep = enabled })
+	return errors.Join(settingsErr, s.syncPreventSleep())
+}
+
+func (s *AppService) syncPreventSleep() error {
+	enabled := s.preventSleepEnabled() && s.appServer.State().Running
+	if err := s.keepAwake.Set(enabled); err != nil || !enabled {
+		return err
+	}
+	if !s.appServer.State().Running {
+		return s.keepAwake.Set(false)
+	}
+	return nil
 }
 
 func (s *AppService) Status() diagnostics.Snapshot {
