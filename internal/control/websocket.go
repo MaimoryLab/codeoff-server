@@ -2,7 +2,6 @@ package control
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -52,7 +51,7 @@ func websocketHandler(server *Server, store *devices.Store, appServer AppServer,
 		if err != nil {
 			return
 		}
-		conn.SetReadLimit(maxUploadSize*4/3 + 1<<20)
+		conn.SetReadLimit(1 << 20)
 		defer conn.Close(websocket.StatusNormalClosure, "")
 		disconnect := store.Connect(device.ID)
 		defer disconnect()
@@ -149,15 +148,6 @@ func (s *websocketSession) dispatch(request websocketRequest) (any, int, error) 
 	case "directories":
 		path, _ := params["path"].(string)
 		result, err := listDirectoriesValue(path)
-		return result, statusFor(err, http.StatusBadRequest), err
-	case "upload":
-		name, _ := params["name"].(string)
-		encoded, _ := params["data"].(string)
-		data, err := base64.StdEncoding.DecodeString(encoded)
-		if err != nil {
-			return nil, http.StatusBadRequest, errors.New("invalid upload data")
-		}
-		result, err := s.server.saveUpload(name, data)
 		return result, statusFor(err, http.StatusBadRequest), err
 	case "thread/list":
 		return s.call("thread/list", params)

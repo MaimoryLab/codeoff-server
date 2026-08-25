@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -86,9 +87,27 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 			Token  string         `json:"token"`
 		}{device, deviceStore.Server(), token})
 	})
+	mux.HandleFunc("POST /api/v1/upload", uploadHandler(server, deviceStore))
 	mux.HandleFunc("GET /api/v1/ws", websocketHandler(server, deviceStore, appServer, events))
 	server.httpServer = &http.Server{Handler: mux}
 	return server
+}
+
+func uploadHandler(server *Server, store *devices.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := authenticateDevice(store, r.Header.Get("Authorization")); !ok {
+			w.Header().Set("WWW-Authenticate", "Bearer")
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		body := http.MaxBytesReader(w, r.Body, maxUploadSize+1)
+		result, err := server.saveUpload(r.URL.Query().Get("name"), body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, result)
+	}
 }
 
 func (r turnRequest) addPermissions(params map[string]any) error {
@@ -156,13 +175,10 @@ func listDirectoriesValue(rawPath string) (map[string]any, error) {
 	return map[string]any{"path": path, "parent": parent, "directories": directories}, nil
 }
 
-func (s *Server) saveUpload(name string, data []byte) (map[string]any, error) {
+func (s *Server) saveUpload(name string, data io.Reader) (map[string]any, error) {
 	name = filepath.Base(strings.TrimSpace(name))
 	if name == "." || name == "" {
 		return nil, errors.New("name is required")
-	}
-	if len(data) == 0 || len(data) > maxUploadSize {
-		return nil, errors.New("invalid file size")
 	}
 	extension := filepath.Ext(name)
 	if len(extension) > 16 {
@@ -173,14 +189,24 @@ func (s *Server) saveUpload(name string, data []byte) (map[string]any, error) {
 		return nil, fmt.Errorf("create upload: %w", err)
 	}
 	path := file.Name()
-	if _, err := file.Write(data); err != nil {
+	limited := io.LimitReader(data, maxUploadSize+1)
+	header, err := io.ReadAll(io.LimitReader(limited, 512))
+	if err == nil {
+		_, err = file.Write(header)
+	}
+	var written int64
+	if err == nil {
+		written, err = io.Copy(file, limited)
+	}
+	if err != nil {
 		_ = file.Close()
 		_ = os.Remove(path)
 		return nil, fmt.Errorf("save upload: %w", err)
 	}
-	header := data
-	if len(header) > 512 {
-		header = header[:512]
+	if len(header) == 0 || int64(len(header))+written > maxUploadSize {
+		_ = file.Close()
+		_ = os.Remove(path)
+		return nil, errors.New("invalid file size")
 	}
 	if err := file.Close(); err != nil {
 		_ = os.Remove(path)

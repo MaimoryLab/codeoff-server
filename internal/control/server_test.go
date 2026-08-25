@@ -2,12 +2,12 @@ package control
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -124,7 +124,7 @@ func TestPairExchangeAndWebSocketStatus(t *testing.T) {
 	}
 }
 
-func TestWebSocketAcceptsMaximumUploadMessage(t *testing.T) {
+func TestHTTPUpload(t *testing.T) {
 	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
 	if err != nil {
 		t.Fatal(err)
@@ -133,47 +133,37 @@ func TestWebSocketAcceptsMaximumUploadMessage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	_, token, err := store.Exchange(pairing.Token, "Phone")
+	if err != nil {
+		t.Fatal(err)
+	}
 	server := New(func(context.Context) diagnostics.Snapshot { return diagnostics.Snapshot{} }, store)
+	t.Cleanup(server.cleanupUploads)
 	httpServer := httptest.NewServer(server.httpServer.Handler)
 	t.Cleanup(httpServer.Close)
-	body, _ := json.Marshal(map[string]string{"token": pairing.Token, "name": "Phone"})
-	response, err := http.Post(httpServer.URL+"/api/v1/pair/exchange", "application/json", strings.NewReader(string(body)))
+
+	request, err := http.NewRequest(http.MethodPost, httpServer.URL+"/api/v1/upload?name=photo.jpg", strings.NewReader("image data"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var exchange struct {
-		Token string `json:"token"`
-	}
-	if err := json.NewDecoder(response.Body).Decode(&exchange); err != nil {
-		t.Fatal(err)
-	}
-	_ = response.Body.Close()
-	wsURL, _ := url.Parse(httpServer.URL)
-	wsURL.Scheme, wsURL.Path = "ws", "/api/v1/ws"
-	conn, _, err := websocket.Dial(context.Background(), wsURL.String(), &websocket.DialOptions{
-		HTTPHeader: http.Header{"Authorization": []string{"Bearer " + exchange.Token}},
-	})
+	request.Header.Set("Authorization", "Bearer "+token)
+	response, err := http.DefaultClient.Do(request)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = conn.Close(websocket.StatusNormalClosure, "") })
-	data := strings.Repeat("a", maxUploadSize)
-	if err := wsjson.Write(context.Background(), conn, map[string]any{
-		"id": 1, "method": "upload", "params": map[string]string{
-			"name": "large.txt", "data": base64.StdEncoding.EncodeToString([]byte(data)),
-		},
-	}); err != nil {
-		t.Fatal(err)
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("upload status = %d", response.StatusCode)
 	}
 	var result struct {
-		ID     int            `json:"id"`
-		Result map[string]any `json:"result"`
+		Path string `json:"path"`
 	}
-	if err := wsjson.Read(context.Background(), conn, &result); err != nil {
+	if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
 		t.Fatal(err)
 	}
-	if result.ID != 1 || result.Result["path"] == nil {
-		t.Fatalf("upload response = %#v", result)
+	data, err := os.ReadFile(result.Path)
+	if err != nil || string(data) != "image data" {
+		t.Fatalf("uploaded data = %q, %v", data, err)
 	}
 }
 
