@@ -27,7 +27,6 @@
         </section>
         <section class="panel installed-only devices-panel" aria-labelledby="devices-title">
             <div class="panel-heading"><div><p class="eyebrow" data-i18n="devices">DEVICES</p><h2 id="devices-title" data-i18n="boundDevices">Bound devices</h2></div><button id="bind-device" class="button secondary" type="button" data-i18n="bindDevice">Bind new device</button></div>
-            <div id="pairing-code" hidden><p id="pairing-expiry" class="muted"></p><div class="copy-field"><span id="pairing-value"></span><button id="copy-pairing" class="mini-button" type="button" data-i18n="copy">Copy</button></div></div>
             <ul id="device-list" class="device-list"><li class="muted" data-i18n="noDevices">No devices bound</li></ul>
         </section>
         <section id="environment-card" class="panel environment-card" aria-labelledby="status-title">
@@ -40,6 +39,16 @@
         </section>
     </div>
 </main>
+<dialog id="pairing-dialog" class="pairing-dialog">
+    <div class="dialog-heading"><div><h2 data-i18n="pairDevice">Pair device</h2><p id="pairing-expiry" class="muted"></p></div><button id="close-pairing-icon" class="dialog-close" type="button" aria-label="Close">&times;</button></div>
+    <canvas id="pairing-qr" class="pairing-qr" width="240" height="240"></canvas>
+    <div class="pairing-fields">
+        <div class="pairing-field"><span data-i18n="pairingCode">Pairing code</span><div><strong id="pairing-value"></strong><button id="copy-pairing" class="mini-button" type="button" data-i18n="copy">Copy</button></div></div>
+        <div class="pairing-field"><span data-i18n="listenAddress">Listen address</span><div><strong id="pairing-listen-value"></strong><button id="copy-pairing-listen" class="mini-button" type="button" data-i18n="copy">Copy</button><button id="start-pairing-app-server" class="mini-button" type="button" data-i18n="start">Start</button></div></div>
+        <div class="pairing-field"><span data-i18n="cloudflareAddress">Cloudflare Tunnel address</span><div><strong id="pairing-tunnel-value"></strong><button id="copy-pairing-tunnel" class="mini-button" type="button" data-i18n="copy">Copy</button><button id="start-pairing-tunnel" class="mini-button" type="button" data-i18n="start">Start</button></div></div>
+    </div>
+    <button id="close-pairing" class="button dialog-done" type="button" data-i18n="close">Close</button>
+</dialog>
 <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
