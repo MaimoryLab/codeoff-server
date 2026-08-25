@@ -264,6 +264,10 @@ async function saveTunnelConfig() {
     saveTunnelButton.disabled = true;
     try {
         const value = tunnelMode.value === "external" ? tunnelURLInput.value.trim() : "";
+        if (tunnelMode.value === "external" && !value) {
+            showToast(t("invalidTunnelURL"), true);
+            return;
+        }
         const state = await AppService.SetTunnelURL(value);
         tunnelConfigDirty = false;
         renderTunnel(state);
