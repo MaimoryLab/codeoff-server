@@ -7,14 +7,14 @@ type Language = "en" | "zh";
 
 const translations: Record<Language, Record<string, string>> = {
     en: {
-        localControl: "LOCAL CONTROL", refresh: "Refresh", copy: "Copy",
+        localControl: "LOCAL CONTROL", connect: "Connect", refresh: "Refresh", copy: "Copy",
         runtime: "RUNTIME", appServer: "Codex app-server", remoteAccess: "REMOTE ACCESS", cloudflareTunnel: "Cloudflare Tunnel", devices: "DEVICES", boundDevices: "Bound devices", bindDevice: "Bind new device", noDevices: "No devices bound", environment: "ENVIRONMENT", environmentStatus: "Environment status", localTools: "Local tools", checking: "Checking", install: "Install", saveRestart: "Save & restart", listenAddress: "Listen address", port: "Port",
-        installed: "Installed", notInstalled: "Not installed", upgrade: "Upgrade", start: "Start", stop: "Stop", close: "Close", checked: "Checked {value}", starting: "Starting", stopping: "Stopping", running: "Running", offline: "Offline", stopped: "Stopped", online: "Online", localControlEndpoint: "Local control endpoint", remoteAccessEnabled: "Remote access enabled", installCloudflared: "Install Cloudflared to enable remote access", installCloudflaredFirst: "Install Cloudflared first", expires: "Expires {value}", pairDevice: "Pair device", pairingCode: "Pairing code", cloudflareAddress: "Cloudflare Tunnel address", connected: "Connected", revoke: "Revoke", copied: "{label} copied", unableToCopy: "Unable to copy {label}", connectionChecking: "Checking local environment...", unableToCheck: "Unable to check environment", startingTunnel: "Starting tunnel...", stoppingTunnel: "Stopping tunnel...", tunnelOnline: "Tunnel is online", tunnelStopped: "Tunnel stopped", unableChangeTunnel: "Unable to change tunnel state", startingAppServer: "Starting app-server...", stoppingAppServer: "Stopping app-server...", appServerRunning: "App-server is running", appServerStopped: "App-server stopped", unableChangeAppServer: "Unable to change app-server state", unableLoadDevices: "Unable to load devices", unableCreatePairing: "Unable to create pairing code", restartingServer: "Restarting local server...", serverRestarted: "Local server restarted", unableUpdateListen: "Unable to update listen address", unableRevoke: "Unable to revoke device", installing: "Installing {label}...", upgrading: "Upgrading {label}...", installationFailed: "Installation failed"
+        installed: "Installed", notInstalled: "Not installed", upgrade: "Upgrade", start: "Start", stop: "Stop", close: "Close", checked: "Checked {value}", starting: "Starting", stopping: "Stopping", running: "Running", offline: "Offline", stopped: "Stopped", online: "Online", localControlEndpoint: "Local control endpoint", remoteAccessEnabled: "Remote access enabled", installCloudflared: "Install Cloudflared to enable remote access", installCloudflaredFirst: "Install Cloudflared first", expires: "Expires {value}", pairDevice: "Pair device", connectDevice: "Connect device", pairingCode: "Pairing code", cloudflareAddress: "Cloudflare Tunnel address", connected: "Connected", revoke: "Revoke", copied: "{label} copied", unableToCopy: "Unable to copy {label}", connectionChecking: "Checking local environment...", unableToCheck: "Unable to check environment", startingTunnel: "Starting tunnel...", stoppingTunnel: "Stopping tunnel...", tunnelOnline: "Tunnel is online", tunnelStopped: "Tunnel stopped", unableChangeTunnel: "Unable to change tunnel state", startingAppServer: "Starting app-server...", stoppingAppServer: "Stopping app-server...", appServerRunning: "App-server is running", appServerStopped: "App-server stopped", unableChangeAppServer: "Unable to change app-server state", unableLoadDevices: "Unable to load devices", unableCreatePairing: "Unable to create pairing code", restartingServer: "Restarting local server...", serverRestarted: "Local server restarted", unableUpdateListen: "Unable to update listen address", unableRevoke: "Unable to revoke device", installing: "Installing {label}...", upgrading: "Upgrading {label}...", installationFailed: "Installation failed"
     },
     zh: {
-        localControl: "本地控制", refresh: "刷新", copy: "复制",
+        localControl: "本地控制", connect: "连接", refresh: "刷新", copy: "复制",
         runtime: "运行时", appServer: "Codex 应用服务", remoteAccess: "远程访问", cloudflareTunnel: "Cloudflare 隧道", devices: "设备", boundDevices: "已绑定设备", bindDevice: "绑定新设备", noDevices: "暂无绑定设备", environment: "环境", environmentStatus: "环境状态", localTools: "本地工具", checking: "检查中", install: "安装", saveRestart: "保存并重启", listenAddress: "监听地址", port: "端口",
-        installed: "已安装", notInstalled: "未安装", upgrade: "升级", start: "启动", stop: "停止", close: "关闭", checked: "检查于 {value}", starting: "启动中", stopping: "停止中", running: "运行中", offline: "离线", stopped: "已停止", online: "在线", localControlEndpoint: "本地控制端点", remoteAccessEnabled: "已启用远程访问", installCloudflared: "安装 Cloudflared 以启用远程访问", installCloudflaredFirst: "请先安装 Cloudflared", expires: "过期时间 {value}", pairDevice: "配对设备", pairingCode: "配对码", cloudflareAddress: "Cloudflare Tunnel 地址", connected: "已连接", revoke: "撤销", copied: "已复制{label}", unableToCopy: "无法复制{label}", connectionChecking: "正在检查本地环境...", unableToCheck: "无法检查环境", startingTunnel: "正在启动隧道...", stoppingTunnel: "正在停止隧道...", tunnelOnline: "隧道已上线", tunnelStopped: "隧道已停止", unableChangeTunnel: "无法更改隧道状态", startingAppServer: "正在启动应用服务...", stoppingAppServer: "正在停止应用服务...", appServerRunning: "应用服务运行中", appServerStopped: "应用服务已停止", unableChangeAppServer: "无法更改应用服务状态", unableLoadDevices: "无法加载设备", unableCreatePairing: "无法创建配对码", restartingServer: "正在重启本地服务...", serverRestarted: "本地服务已重启", unableUpdateListen: "无法更新监听地址", unableRevoke: "无法撤销设备", installing: "正在安装 {label}...", upgrading: "正在升级 {label}...", installationFailed: "安装失败"
+        installed: "已安装", notInstalled: "未安装", upgrade: "升级", start: "启动", stop: "停止", close: "关闭", checked: "检查于 {value}", starting: "启动中", stopping: "停止中", running: "运行中", offline: "离线", stopped: "已停止", online: "在线", localControlEndpoint: "本地控制端点", remoteAccessEnabled: "已启用远程访问", installCloudflared: "安装 Cloudflared 以启用远程访问", installCloudflaredFirst: "请先安装 Cloudflared", expires: "过期时间 {value}", pairDevice: "配对设备", connectDevice: "连接设备", pairingCode: "配对码", cloudflareAddress: "Cloudflare Tunnel 地址", connected: "已连接", revoke: "撤销", copied: "已复制{label}", unableToCopy: "无法复制{label}", connectionChecking: "正在检查本地环境...", unableToCheck: "无法检查环境", startingTunnel: "正在启动隧道...", stoppingTunnel: "正在停止隧道...", tunnelOnline: "隧道已上线", tunnelStopped: "隧道已停止", unableChangeTunnel: "无法更改隧道状态", startingAppServer: "正在启动应用服务...", stoppingAppServer: "正在停止应用服务...", appServerRunning: "应用服务运行中", appServerStopped: "应用服务已停止", unableChangeAppServer: "无法更改应用服务状态", unableLoadDevices: "无法加载设备", unableCreatePairing: "无法创建配对码", restartingServer: "正在重启本地服务...", serverRestarted: "本地服务已重启", unableUpdateListen: "无法更新监听地址", unableRevoke: "无法撤销设备", installing: "正在安装 {label}...", upgrading: "正在升级 {label}...", installationFailed: "安装失败"
     }
 };
 
@@ -44,6 +44,7 @@ const platform = document.querySelector<HTMLElement>("#platform")!;
 const message = document.querySelector<HTMLElement>("#message")!;
 const messageText = document.querySelector<HTMLElement>("#message-text")!;
 const copyMessageButton = document.querySelector<HTMLButtonElement>("#copy-message")!;
+const connectButton = document.querySelector<HTMLButtonElement>("#connect")!;
 const refreshButton = document.querySelector<HTMLButtonElement>("#refresh")!;
 const installNodeButton = document.querySelector<HTMLButtonElement>("#install-node")!;
 const installCodexButton = document.querySelector<HTMLButtonElement>("#install-codex")!;
@@ -66,6 +67,8 @@ const toggleTunnelButton = document.querySelector<HTMLButtonElement>("#toggle-tu
 const bindDeviceButton = document.querySelector<HTMLButtonElement>("#bind-device")!;
 const pairingDialog = document.querySelector<HTMLDialogElement>("#pairing-dialog")!;
 const pairingQR = document.querySelector<HTMLCanvasElement>("#pairing-qr")!;
+const pairingDialogTitle = document.querySelector<HTMLElement>("#pairing-dialog-title")!;
+const pairingCodeField = document.querySelector<HTMLElement>("#pairing-code-field")!;
 const pairingValue = document.querySelector<HTMLElement>("#pairing-value")!;
 const pairingExpiry = document.querySelector<HTMLElement>("#pairing-expiry")!;
 const pairingListenValue = document.querySelector<HTMLElement>("#pairing-listen-value")!;
@@ -83,6 +86,7 @@ let tunnelURL = "";
 let cloudflaredInstalled = false;
 let pairingToken = "";
 let pairingExpiresAt = "";
+let pairingDialogMode: "pairing" | "connection" | "" = "";
 let controlAddr = "";
 let controlAddrs: string[] = [];
 let serverUUID = "";
@@ -177,9 +181,11 @@ function renderCurrentState() {
 }
 
 async function updatePairingDialog() {
-    if (!pairingToken) {
-        return;
-    }
+    if (!pairingDialogMode) return;
+    const pairing = pairingDialogMode === "pairing";
+    pairingDialogTitle.textContent = t(pairing ? "pairDevice" : "connectDevice");
+    pairingCodeField.hidden = !pairing;
+    pairingExpiry.hidden = !pairing;
     pairingValue.textContent = pairingToken;
     pairingExpiry.textContent = t("expires", {value: pairingExpiresAt});
     pairingListenValue.textContent = controlAddrs.join(", ") || "-";
@@ -193,14 +199,15 @@ async function updatePairingDialog() {
     startPairingTunnelButton.title = cloudflaredInstalled ? "" : t("installCloudflaredFirst");
     await QRCode.toCanvas(pairingQR, JSON.stringify({
         serverUuid: serverUUID,
-        pairingCode: pairingToken,
         listenAddresses: controlAddrs,
         tunnelAddress: tunnelURL,
+        ...(pairing ? {pairingCode: pairingToken} : {}),
     }), {width: 240, margin: 1, color: {dark: "#101218", light: "#ffffff"}});
 }
 
 function hidePairingDialog() {
     pairingToken = "";
+    pairingDialogMode = "";
     if (pairingDialog.open) pairingDialog.close();
 }
 
@@ -212,6 +219,7 @@ async function refresh() {
         controlAddr = overview.controlAddr || "";
         controlAddrs = overview.controlAddrs ?? [];
         serverUUID = overview.serverUuid;
+        connectButton.disabled = !serverUUID;
         renderListenAddr(overview.listenAddr);
         render(environment);
         renderAppServer(overview.appServer);
@@ -293,6 +301,7 @@ async function bindDevice() {
         const pairing = await AppService.NewPairing();
         pairingToken = pairing.token;
         pairingExpiresAt = new Date(pairing.expiresAt).toLocaleTimeString();
+        pairingDialogMode = "pairing";
         pairingDialog.showModal();
         await updatePairingDialog();
     } catch (error) {
@@ -300,6 +309,13 @@ async function bindDevice() {
     } finally {
         bindDeviceButton.disabled = false;
     }
+}
+
+async function showConnectionDialog() {
+    pairingToken = "";
+    pairingDialogMode = "connection";
+    pairingDialog.showModal();
+    await updatePairingDialog();
 }
 
 async function copyPairingCode() {
@@ -388,6 +404,7 @@ async function install(kind: "node" | "codex" | "cloudflared") {
 }
 
 refreshButton.addEventListener("click", refresh);
+connectButton.addEventListener("click", () => void showConnectionDialog());
 installNodeButton.addEventListener("click", () => void install("node"));
 installCodexButton.addEventListener("click", () => void install("codex"));
 installCloudflaredButton.addEventListener("click", () => void install("cloudflared"));
@@ -400,6 +417,7 @@ copyPairingTunnelButton.addEventListener("click", () => void copyText(tunnelURL,
 startPairingAppServerButton.addEventListener("click", () => void startPairingAppServer());
 startPairingTunnelButton.addEventListener("click", () => void startPairingTunnel());
 closePairingButtons.forEach((button) => button.addEventListener("click", () => pairingDialog.close()));
+pairingDialog.addEventListener("close", () => { pairingDialogMode = ""; });
 copyMessageButton.addEventListener("click", () => void copyText(messageText.textContent ?? "", "Error"));
 copyAppServerButton.addEventListener("click", () => void copyText(controlAddr, "Local address"));
 copyTunnelButton.addEventListener("click", () => void copyText(tunnelURL, "Cloudflare address"));
