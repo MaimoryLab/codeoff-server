@@ -5,7 +5,7 @@ go 1.27.0
 require (
 	github.com/coder/websocket v1.8.15
 	github.com/godbus/dbus/v5 v5.2.2
-	github.com/wailsapp/wails/v3 v3.0.0-beta.11
+	github.com/wailsapp/wails/v3 v3.0.0-beta.12
 	golang.org/x/sys v0.47.0
 )
 
