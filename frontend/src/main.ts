@@ -18,7 +18,8 @@ const translations: Record<Language, Record<string, string>> = {
 };
 
 const languageSelect = document.querySelector<HTMLSelectElement>("#language")!;
-let language = (localStorage.getItem("codex-language") as Language | null) || "en";
+const savedLanguage = localStorage.getItem("codex-language");
+let language: Language = savedLanguage === "zh" ? "zh" : "en";
 
 function t(key: string, args: Record<string, string> = {}) {
     let value = translations[language][key] || translations.en[key] || key;
