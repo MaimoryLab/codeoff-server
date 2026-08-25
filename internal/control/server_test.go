@@ -110,6 +110,17 @@ func TestPairExchangeAndWebSocketStatus(t *testing.T) {
 	if result.ID != 1 || result.Result["server"] == nil {
 		t.Fatalf("websocket status = %#v", result)
 	}
+	if err := wsjson.Write(context.Background(), conn, map[string]any{
+		"id": 2, "method": "heartbeat",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := wsjson.Read(context.Background(), conn, &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.ID != 2 || result.Result["ack"] != true {
+		t.Fatalf("heartbeat response = %#v", result)
+	}
 }
 
 func TestWebSocketPushesEventsWithIDs(t *testing.T) {

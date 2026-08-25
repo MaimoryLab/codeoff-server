@@ -132,6 +132,8 @@ func (s *websocketSession) dispatch(request websocketRequest) (any, int, error) 
 		}
 	}
 	switch request.Method {
+	case "heartbeat":
+		return map[string]bool{"ack": true}, http.StatusOK, nil
 	case "status":
 		value, err := json.Marshal(s.server.status(s.ctx))
 		if err != nil {
