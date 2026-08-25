@@ -1,8 +1,11 @@
 package diagnostics
 
 import (
+	"bytes"
 	"context"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -27,11 +30,12 @@ type Snapshot struct {
 	Cloudflared  ToolStatus `json:"cloudflared"`
 }
 
-// Check probes the commands without changing the user's environment.
+// Check probes commands using the user's login-shell PATH when running as a macOS app.
 func Check(ctx context.Context) Snapshot {
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	configurePath()
 
 	node := checkCommand(ctx, "node", "--version")
 	codex := checkCommand(ctx, "codex", "--version")
@@ -47,6 +51,57 @@ func Check(ctx context.Context) Snapshot {
 		AppServer:    appServer,
 		Cloudflared:  cloudflared,
 	}
+}
+
+func configurePath() {
+	if runtime.GOOS != "darwin" {
+		return
+	}
+	executable, err := os.Executable()
+	if err != nil || !strings.Contains(filepath.ToSlash(executable), ".app/Contents/MacOS/") {
+		return
+	}
+
+	environment := os.Environ()
+	shell := strings.TrimSpace(os.Getenv("SHELL"))
+	if shell == "" {
+		shell = "/bin/zsh"
+	}
+	if !filepath.IsAbs(shell) || !isExecutable(shell) {
+		return
+	}
+
+	path := loginShellPath(shell, environment)
+	if path != "" {
+		_ = os.Setenv("PATH", path)
+	}
+}
+
+func loginShellPath(shell string, environment []string) string {
+	// ponytail: cap shell startup at three seconds; keep the launchd PATH if setup hangs.
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	command := exec.CommandContext(ctx, shell, "-lic", `printf '\036%s\037' "$PATH"`)
+	command.Env = environment
+	command.WaitDelay = 250 * time.Millisecond
+	output, _ := command.Output()
+	if ctx.Err() != nil {
+		return ""
+	}
+	start := bytes.LastIndexByte(output, 0x1e)
+	if start < 0 {
+		return ""
+	}
+	end := bytes.IndexByte(output[start+1:], 0x1f)
+	if end < 0 {
+		return ""
+	}
+	return strings.TrimSpace(string(output[start+1 : start+1+end]))
+}
+
+func isExecutable(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir() && info.Mode().Perm()&0o111 != 0
 }
 
 func checkCommand(ctx context.Context, name string, args ...string) ToolStatus {
