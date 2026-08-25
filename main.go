@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"log"
+	"runtime"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -13,6 +14,9 @@ var assets embed.FS
 
 //go:embed build/appicon.png
 var appIcon []byte
+
+//go:embed build/darwin/tray-icon.png
+var macTrayIcon []byte
 
 func main() {
 	service, err := NewAppService()
@@ -105,10 +109,12 @@ func main() {
 	}
 	updateTrayMenu()
 
-	tray := app.SystemTray.New().
-		SetIcon(appIcon).
-		AttachWindow(window).
-		SetMenu(menu)
+	tray := app.SystemTray.New().AttachWindow(window).SetMenu(menu)
+	if runtime.GOOS == "darwin" {
+		tray.SetTemplateIcon(macTrayIcon)
+	} else {
+		tray.SetIcon(appIcon)
+	}
 	tray.OnRightClick(func() {
 		updateTrayMenu()
 		tray.ShowMenu()
