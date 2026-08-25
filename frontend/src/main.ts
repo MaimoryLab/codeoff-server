@@ -6,20 +6,18 @@ type Language = "en" | "zh";
 
 const translations: Record<Language, Record<string, string>> = {
     en: {
-        language: "Language", english: "English", chinese: "简体中文", localControl: "LOCAL CONTROL", refresh: "Refresh", copy: "Copy",
+        localControl: "LOCAL CONTROL", refresh: "Refresh", copy: "Copy",
         runtime: "RUNTIME", appServer: "Codex app-server", remoteAccess: "REMOTE ACCESS", cloudflareTunnel: "Cloudflare Tunnel", devices: "DEVICES", boundDevices: "Bound devices", bindDevice: "Bind new device", noDevices: "No devices bound", environment: "ENVIRONMENT", environmentStatus: "Environment status", localTools: "Local tools", checking: "Checking", install: "Install", saveRestart: "Save & restart", listenAddress: "Listen address", port: "Port",
         installed: "Installed", notInstalled: "Not installed", upgrade: "Upgrade", start: "Start", stop: "Stop", checked: "Checked {value}", starting: "Starting", stopping: "Stopping", running: "Running", offline: "Offline", stopped: "Stopped", online: "Online", localControlEndpoint: "Local control endpoint", remoteAccessEnabled: "Remote access enabled", installCloudflared: "Install Cloudflared to enable remote access", installCloudflaredFirst: "Install Cloudflared first", expires: "Expires {value}", connected: "Connected", revoke: "Revoke", copied: "{label} copied", unableToCopy: "Unable to copy {label}", connectionChecking: "Checking local environment...", unableToCheck: "Unable to check environment", startingTunnel: "Starting tunnel...", stoppingTunnel: "Stopping tunnel...", tunnelOnline: "Tunnel is online", tunnelStopped: "Tunnel stopped", unableChangeTunnel: "Unable to change tunnel state", startingAppServer: "Starting app-server...", stoppingAppServer: "Stopping app-server...", appServerRunning: "App-server is running", appServerStopped: "App-server stopped", unableChangeAppServer: "Unable to change app-server state", unableLoadDevices: "Unable to load devices", unableCreatePairing: "Unable to create pairing code", restartingServer: "Restarting local server...", serverRestarted: "Local server restarted", unableUpdateListen: "Unable to update listen address", unableRevoke: "Unable to revoke device", installing: "Installing {label}...", upgrading: "Upgrading {label}...", installationFailed: "Installation failed"
     },
     zh: {
-        language: "语言", english: "English", chinese: "简体中文", localControl: "本地控制", refresh: "刷新", copy: "复制",
+        localControl: "本地控制", refresh: "刷新", copy: "复制",
         runtime: "运行时", appServer: "Codex 应用服务", remoteAccess: "远程访问", cloudflareTunnel: "Cloudflare 隧道", devices: "设备", boundDevices: "已绑定设备", bindDevice: "绑定新设备", noDevices: "暂无绑定设备", environment: "环境", environmentStatus: "环境状态", localTools: "本地工具", checking: "检查中", install: "安装", saveRestart: "保存并重启", listenAddress: "监听地址", port: "端口",
         installed: "已安装", notInstalled: "未安装", upgrade: "升级", start: "启动", stop: "停止", checked: "检查于 {value}", starting: "启动中", stopping: "停止中", running: "运行中", offline: "离线", stopped: "已停止", online: "在线", localControlEndpoint: "本地控制端点", remoteAccessEnabled: "已启用远程访问", installCloudflared: "安装 Cloudflared 以启用远程访问", installCloudflaredFirst: "请先安装 Cloudflared", expires: "过期时间 {value}", connected: "已连接", revoke: "撤销", copied: "已复制{label}", unableToCopy: "无法复制{label}", connectionChecking: "正在检查本地环境...", unableToCheck: "无法检查环境", startingTunnel: "正在启动隧道...", stoppingTunnel: "正在停止隧道...", tunnelOnline: "隧道已上线", tunnelStopped: "隧道已停止", unableChangeTunnel: "无法更改隧道状态", startingAppServer: "正在启动应用服务...", stoppingAppServer: "正在停止应用服务...", appServerRunning: "应用服务运行中", appServerStopped: "应用服务已停止", unableChangeAppServer: "无法更改应用服务状态", unableLoadDevices: "无法加载设备", unableCreatePairing: "无法创建配对码", restartingServer: "正在重启本地服务...", serverRestarted: "本地服务已重启", unableUpdateListen: "无法更新监听地址", unableRevoke: "无法撤销设备", installing: "正在安装 {label}...", upgrading: "正在升级 {label}...", installationFailed: "安装失败"
     }
 };
 
-const languageSelect = document.querySelector<HTMLSelectElement>("#language")!;
-const savedLanguage = localStorage.getItem("codex-language");
-let language: Language = savedLanguage === "zh" ? "zh" : "en";
+const language: Language = navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
 
 function t(key: string, args: Record<string, string> = {}) {
     let value = translations[language][key] || translations.en[key] || key;
@@ -29,7 +27,6 @@ function t(key: string, args: Record<string, string> = {}) {
 
 function applyLanguage() {
     document.documentElement.lang = language === "zh" ? "zh-CN" : "en";
-    languageSelect.value = language;
     document.querySelectorAll<HTMLElement>("[data-i18n]").forEach((element) => {
         const key = element.dataset.i18n;
         if (key) element.textContent = t(key);
@@ -340,11 +337,6 @@ async function install(kind: "node" | "codex" | "cloudflared") {
 }
 
 refreshButton.addEventListener("click", refresh);
-languageSelect.addEventListener("change", () => {
-    language = languageSelect.value === "zh" ? "zh" : "en";
-    localStorage.setItem("codex-language", language);
-    applyLanguage();
-});
 installNodeButton.addEventListener("click", () => void install("node"));
 installCodexButton.addEventListener("click", () => void install("codex"));
 installCloudflaredButton.addEventListener("click", () => void install("cloudflared"));
