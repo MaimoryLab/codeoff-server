@@ -12,3 +12,6 @@ build/android/overlay.json
 build/android/gen/
 
 .DS_Store
+
+.env
+.agents/
