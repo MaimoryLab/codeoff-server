@@ -111,7 +111,7 @@ func main() {
 
 	tray := app.SystemTray.New().AttachWindow(window).SetMenu(menu)
 	if runtime.GOOS == "darwin" {
-		tray.SetIcon(macTrayIcon)
+		tray.SetTemplateIcon(macTrayIcon)
 	} else {
 		tray.SetIcon(appIcon)
 	}
