@@ -62,10 +62,10 @@ const tunnelState = document.querySelector<HTMLElement>("#tunnel-state")!;
 const tunnelDetail = document.querySelector<HTMLElement>("#tunnel-detail")!;
 const tunnelAddress = document.querySelector<HTMLElement>("#tunnel-address")!;
 const tunnelAddressValue = document.querySelector<HTMLElement>("#tunnel-address-value")!;
-const tunnelMode = document.querySelector<HTMLSelectElement>("#tunnel-mode")!;
+const tunnelModeQuickButton = document.querySelector<HTMLButtonElement>("#tunnel-mode-quick")!;
+const tunnelModeExternalButton = document.querySelector<HTMLButtonElement>("#tunnel-mode-external")!;
 const tunnelURLField = document.querySelector<HTMLElement>("#tunnel-url-field")!;
 const tunnelURLInput = document.querySelector<HTMLInputElement>("#tunnel-url")!;
-const saveTunnelButton = document.querySelector<HTMLButtonElement>("#save-tunnel")!;
 const copyTunnelButton = document.querySelector<HTMLButtonElement>("#copy-tunnel")!;
 const toggleTunnelButton = document.querySelector<HTMLButtonElement>("#toggle-tunnel")!;
 const bindDeviceButton = document.querySelector<HTMLButtonElement>("#bind-device")!;
@@ -88,6 +88,10 @@ let appServerRunning = false;
 let tunnelRunning = false;
 let tunnelExternal = false;
 let tunnelConfigDirty = false;
+let selectedTunnelMode: "quick" | "external" = "quick";
+let tunnelSaveInFlight = false;
+let tunnelSaveQueued = false;
+let tunnelConfigVersion = 0;
 let tunnelURL = "";
 let cloudflaredInstalled = false;
 let pairingToken = "";
@@ -171,12 +175,11 @@ function renderTunnel(state: TunnelState) {
     tunnelExternal = !!state.external;
     tunnelURL = state.url || "";
     if (!tunnelConfigDirty) {
-        tunnelMode.value = tunnelExternal ? "external" : "quick";
+        setTunnelMode(tunnelExternal ? "external" : "quick", false);
         tunnelURLInput.value = tunnelExternal ? tunnelURL : tunnelURLInput.value;
     }
-    tunnelURLField.hidden = tunnelMode.value !== "external";
-    tunnelURLInput.hidden = tunnelMode.value !== "external";
-    saveTunnelButton.disabled = state.starting || state.stopping;
+    tunnelURLField.hidden = selectedTunnelMode !== "external";
+    tunnelURLInput.hidden = selectedTunnelMode !== "external";
     tunnelState.textContent = state.starting ? t("starting") : state.stopping ? t("stopping") : tunnelExternal ? t("configured") : state.running ? t("online") : t("offline");
     tunnelState.className = state.running || tunnelExternal ? "state-online" : "state-offline";
     tunnelDetail.textContent = tunnelExternal ? state.error || t("externalTunnelConfigured") : cloudflaredInstalled ? state.error || (state.running ? t("remoteAccessEnabled") : t("stopped")) : t("installCloudflared");
@@ -261,21 +264,45 @@ async function toggleTunnel() {
 }
 
 async function saveTunnelConfig() {
-    saveTunnelButton.disabled = true;
+    if (tunnelSaveInFlight) {
+        tunnelSaveQueued = true;
+        return;
+    }
+    if (!tunnelConfigDirty) return;
+    const value = selectedTunnelMode === "external" ? tunnelURLInput.value.trim() : "";
+    if (selectedTunnelMode === "external" && !value) return;
+    const version = tunnelConfigVersion;
+    tunnelSaveInFlight = true;
     try {
-        const value = tunnelMode.value === "external" ? tunnelURLInput.value.trim() : "";
-        if (tunnelMode.value === "external" && !value) {
-            showToast(t("invalidTunnelURL"), true);
-            return;
-        }
         const state = await AppService.SetTunnelURL(value);
-        tunnelConfigDirty = false;
-        renderTunnel(state);
-        showToast(t("tunnelSettingsSaved"));
+        if (version === tunnelConfigVersion) {
+            tunnelConfigDirty = false;
+            renderTunnel(state);
+            showToast(t("tunnelSettingsSaved"));
+        }
     } catch (error) {
         showToast(error instanceof Error ? error.message : t("unableSaveTunnel"), true);
     } finally {
-        saveTunnelButton.disabled = false;
+        tunnelSaveInFlight = false;
+        if (tunnelSaveQueued) {
+            tunnelSaveQueued = false;
+            void saveTunnelConfig();
+        }
+    }
+}
+
+function setTunnelMode(mode: "quick" | "external", dirty = true) {
+    const changed = selectedTunnelMode !== mode;
+    selectedTunnelMode = mode;
+    tunnelModeQuickButton.classList.toggle("active", mode === "quick");
+    tunnelModeExternalButton.classList.toggle("active", mode === "external");
+    tunnelModeQuickButton.setAttribute("aria-pressed", `${mode === "quick"}`);
+    tunnelModeExternalButton.setAttribute("aria-pressed", `${mode === "external"}`);
+    tunnelURLField.hidden = mode !== "external";
+    tunnelURLInput.hidden = mode !== "external";
+    if (dirty && changed) {
+        tunnelConfigDirty = true;
+        tunnelConfigVersion++;
     }
 }
 
@@ -444,15 +471,19 @@ installCodexButton.addEventListener("click", () => void install("codex"));
 installCloudflaredButton.addEventListener("click", () => void install("cloudflared"));
 toggleAppServerButton.addEventListener("click", () => void toggleAppServer());
 toggleTunnelButton.addEventListener("click", () => void toggleTunnel());
-tunnelMode.addEventListener("change", () => {
-    const external = tunnelMode.value === "external";
-    tunnelConfigDirty = true;
-    tunnelURLField.hidden = !external;
-    tunnelURLInput.hidden = !external;
-    saveTunnelButton.disabled = false;
+tunnelModeQuickButton.addEventListener("click", () => {
+    setTunnelMode("quick");
+    void saveTunnelConfig();
 });
-tunnelURLInput.addEventListener("input", () => { tunnelConfigDirty = true; });
-saveTunnelButton.addEventListener("click", () => void saveTunnelConfig());
+tunnelModeExternalButton.addEventListener("click", () => {
+    setTunnelMode("external");
+    if (tunnelURLInput.value.trim()) void saveTunnelConfig();
+});
+tunnelURLInput.addEventListener("input", () => {
+    tunnelConfigDirty = true;
+    tunnelConfigVersion++;
+});
+tunnelURLInput.addEventListener("blur", () => { window.setTimeout(() => void saveTunnelConfig(), 0); });
 bindDeviceButton.addEventListener("click", () => void bindDevice());
 copyPairingButton.addEventListener("click", () => void copyPairingCode());
 copyPairingListenButton.addEventListener("click", () => void copyText(controlAddrs.join("\n"), t("listenAddress")));
