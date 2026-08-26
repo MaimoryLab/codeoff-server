@@ -260,3 +260,52 @@ jobs:
             bin/codeoff-server-linux-${{ matrix.arch.goarch }}.rpm
             bin/codeoff-server-linux-${{ matrix.arch.goarch }}.pkg.tar.zst
           if-no-files-found: error
+
+  release:
+    needs: [macos, windows, linux]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    name: Publish release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: installer-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Validate and publish release
+        shell: bash
+        run: |
+          expected=(
+            codeoff-server-darwin-amd64.dmg
+            codeoff-server-darwin-arm64.dmg
+            codeoff-server-amd64-installer.exe
+            codeoff-server-arm64-installer.exe
+            codeoff-server-amd64.AppImage
+            codeoff-server-arm64.AppImage
+            codeoff-server-linux-amd64.deb
+            codeoff-server-linux-arm64.deb
+            codeoff-server-linux-amd64.rpm
+            codeoff-server-linux-arm64.rpm
+            codeoff-server-linux-amd64.pkg.tar.zst
+            codeoff-server-linux-arm64.pkg.tar.zst
+          )
+          mapfile -t assets < <(find release-assets -maxdepth 1 -type f -printf '%f\n' | sort)
+          diff <(printf '%s\n' "${expected[@]}" | sort) <(printf '%s\n' "${assets[@]}")
+          (cd release-assets && sha256sum * > SHA256SUMS)
+
+          if gh release view "$RELEASE_VERSION" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_VERSION" release-assets/* --clobber
+            gh release edit "$RELEASE_VERSION" --draft=false --prerelease=false
+          else
+            gh release create "$RELEASE_VERSION" release-assets/* \
+              --verify-tag \
+              --title "$RELEASE_VERSION" \
+              --generate-notes
+          fi
