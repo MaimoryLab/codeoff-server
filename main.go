@@ -1,13 +1,19 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"log"
 	"runtime"
+	"slices"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
+	"github.com/wailsapp/wails/v3/pkg/updater"
+	"github.com/wailsapp/wails/v3/pkg/updater/providers/github"
 )
+
+var currentVersion = "dev"
 
 //go:embed all:frontend/dist
 var assets embed.FS
@@ -43,6 +49,20 @@ func main() {
 			ApplicationShouldTerminateAfterLastWindowClosed: false,
 		},
 	})
+	githubProvider, err := github.New(github.Config{
+		Repository:    "MaimoryLab/codeoff-server",
+		ChecksumAsset: "SHA256SUMS",
+		AssetMatcher:  otaAssetMatcher,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	if err := app.Updater.Init(updater.Config{
+		CurrentVersion: currentVersion,
+		Providers:      []updater.Provider{githubProvider},
+	}); err != nil {
+		log.Fatal(err)
+	}
 
 	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "Codeoff Server",
@@ -93,6 +113,13 @@ func main() {
 		updateTrayMenu()
 	})
 	menu.AddSeparator()
+	menu.Add("检查更新").OnClick(func(*application.Context) {
+		go func() {
+			if err := app.Updater.CheckAndInstall(context.Background()); err != nil {
+				log.Printf("check for updates: %v", err)
+			}
+		}()
+	})
 	menu.Add("打开控制面板").OnClick(func(*application.Context) { window.Show().Focus() })
 	menu.Add("退出").OnClick(func(*application.Context) { app.Quit() })
 	menu.AddSeparator()
@@ -125,6 +152,11 @@ func main() {
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func otaAssetMatcher(req updater.CheckRequest, assets []github.ReleaseAsset) int {
+	want := "ota-codeoff-server-" + req.Platform + "-" + req.Arch + ".zip"
+	return slices.IndexFunc(assets, func(asset github.ReleaseAsset) bool { return asset.Name == want })
 }
 
 func serviceStatus(installed, running, starting, stopping bool) string {

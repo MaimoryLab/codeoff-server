@@ -108,7 +108,7 @@ jobs:
           -productversion ${{ needs.prepare.outputs.version }}
 
       - name: Build macOS app
-        run: wails3 task package ARCH=${{ matrix.arch.goarch }}
+        run: wails3 task package ARCH=${{ matrix.arch.goarch }} APP_VERSION=${{ needs.prepare.outputs.version }}
 
       - name: Sign and notarize macOS app
         run: >-
@@ -192,7 +192,7 @@ jobs:
           nsis-version: '3.12'
 
       - name: Package Windows installer
-        run: wails3 task package ARCH=${{ matrix.arch.goarch }}
+        run: wails3 task package ARCH=${{ matrix.arch.goarch }} APP_VERSION=${{ needs.prepare.outputs.version }}
 
       - name: Upload Windows installer
         uses: actions/upload-artifact@v7
@@ -251,6 +251,7 @@ jobs:
         run: >-
           wails3 task package
           ARCH=${{ matrix.arch.goarch }}
+          APP_VERSION=${{ needs.prepare.outputs.version }}
           VERSION=${{ needs.prepare.outputs.version }}
           PACKAGE_NAME=codeoff-server-linux-${{ matrix.arch.goarch }}
 
