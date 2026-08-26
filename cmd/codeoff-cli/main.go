@@ -9,20 +9,71 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/MaimoryLab/codeoff-server/internal/daemon"
 )
 
+var (
+	jsonOutput bool
+	qrDir      string
+)
+
+type client struct {
+	baseURL string
+	token   string
+}
+
+type overview struct {
+	AppServer    runtimeState `json:"appServer"`
+	Tunnel       tunnelState  `json:"tunnel"`
+	ControlAddr  string       `json:"controlAddr"`
+	ControlAddrs []string     `json:"controlAddrs"`
+	ServerUUID   string       `json:"serverUuid"`
+}
+
+type runtimeState struct {
+	Running  bool   `json:"running"`
+	Starting bool   `json:"starting"`
+	Stopping bool   `json:"stopping"`
+	Error    string `json:"error"`
+}
+
+type tunnelState struct {
+	Running  bool   `json:"running"`
+	Starting bool   `json:"starting"`
+	Stopping bool   `json:"stopping"`
+	External bool   `json:"external"`
+	URL      string `json:"url"`
+	Error    string `json:"error"`
+}
+
+type device struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	LastSeen  string `json:"lastSeen"`
+	Connected bool   `json:"connected"`
+}
+
+type pairing struct {
+	Token     string `json:"token"`
+	ExpiresAt string `json:"expiresAt"`
+}
+
 func main() {
 	statePath := flag.String("state", "", "daemon state file")
+	flag.BoolVar(&jsonOutput, "json", false, "print machine-readable JSON")
+	flag.StringVar(&qrDir, "qr-dir", ".", "directory for generated QR code PNG files")
 	flag.Usage = usage
 	flag.Parse()
 	if flag.NArg() == 0 {
 		usage()
 		os.Exit(2)
 	}
+
 	path := *statePath
 	if path == "" {
 		var err error
@@ -36,57 +87,67 @@ func main() {
 		fatal(fmt.Errorf("load daemon state: %w", err))
 	}
 	client := &client{baseURL: state.ControlAddr, token: state.AdminToken}
-
 	args := flag.Args()
+
 	switch args[0] {
 	case "status", "info":
-		mustJSON(client.get("/api/v1/admin/status"))
+		raw := must(client.get("/api/v1/admin/status"))
+		if jsonOutput {
+			printJSON(raw)
+		} else {
+			printStatus(raw)
+		}
 	case "devices":
-		mustJSON(client.get("/api/v1/admin/devices"))
+		raw := must(client.get("/api/v1/admin/devices"))
+		if jsonOutput {
+			printJSON(raw)
+		} else {
+			printDevices(raw)
+		}
 	case "pair":
-		mustJSON(client.post("/api/v1/admin/pair", nil))
+		printPair(client, true)
+	case "connect":
+		printPair(client, false)
 	case "revoke":
 		if len(args) != 2 {
 			fatal(errors.New("usage: codeoff-cli revoke DEVICE_ID"))
 		}
-		mustJSON(client.post("/api/v1/admin/revoke", map[string]string{"id": args[1]}))
+		raw := must(client.post("/api/v1/admin/revoke", map[string]string{"id": args[1]}))
+		printAction("device revoked", raw)
 	case "restart":
 		if len(args) != 2 || (args[1] != "appserver" && args[1] != "tunnel") {
 			fatal(errors.New("usage: codeoff-cli restart appserver|tunnel"))
 		}
-		mustJSON(client.post("/api/v1/admin/restart/"+args[1], nil))
+		raw := must(client.post("/api/v1/admin/restart/"+args[1], nil))
+		printAction(args[1]+" restarted", raw)
 	case "shutdown":
-		mustJSON(client.post("/api/v1/admin/shutdown", nil))
+		raw := must(client.post("/api/v1/admin/shutdown", nil))
+		printAction("daemon shutdown requested", raw)
 	default:
 		fatal(fmt.Errorf("unknown command %q", args[0]))
 	}
 }
 
-type client struct {
-	baseURL string
-	token   string
-}
-
-func (c *client) get(path string) any {
+func (c *client) get(path string) (json.RawMessage, error) {
 	return c.request(http.MethodGet, path, nil)
 }
 
-func (c *client) post(path string, body any) any {
+func (c *client) post(path string, body any) (json.RawMessage, error) {
 	return c.request(http.MethodPost, path, body)
 }
 
-func (c *client) request(method, path string, body any) any {
+func (c *client) request(method, path string, body any) (json.RawMessage, error) {
 	var reader io.Reader
 	if body != nil {
 		data, err := json.Marshal(body)
 		if err != nil {
-			fatal(err)
+			return nil, err
 		}
 		reader = bytes.NewReader(data)
 	}
 	req, err := http.NewRequest(method, strings.TrimRight(c.baseURL, "/")+path, reader)
 	if err != nil {
-		fatal(err)
+		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	if body != nil {
@@ -94,34 +155,206 @@ func (c *client) request(method, path string, body any) any {
 	}
 	response, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fatal(err)
+		return nil, err
 	}
 	defer response.Body.Close()
-	data, _ := io.ReadAll(response.Body)
+	data, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		fatal(fmt.Errorf("daemon returned %s: %s", response.Status, strings.TrimSpace(string(data))))
+		return nil, fmt.Errorf("daemon returned %s: %s", response.Status, strings.TrimSpace(string(data)))
 	}
-	var value any
-	if err := json.Unmarshal(data, &value); err != nil {
-		fatal(fmt.Errorf("decode daemon response: %w", err))
+	if !json.Valid(data) {
+		return nil, errors.New("daemon returned invalid JSON")
 	}
-	return value
+	return bytes.TrimSpace(data), nil
 }
 
-func mustJSON(value any) {
+func printPair(c *client, includePairing bool) {
+	statusRaw := must(c.get("/api/v1/admin/status"))
+	var status overview
+	if err := json.Unmarshal(statusRaw, &status); err != nil {
+		fatal(fmt.Errorf("decode daemon status: %w", err))
+	}
+
+	var pair pairing
+	if includePairing {
+		raw := must(c.post("/api/v1/admin/pair", nil))
+		if err := json.Unmarshal(raw, &pair); err != nil {
+			fatal(fmt.Errorf("decode pairing response: %w", err))
+		}
+	}
+	payload := map[string]any{
+		"serverUuid":      status.ServerUUID,
+		"listenAddresses": status.ControlAddrs,
+		"tunnelAddress":   status.Tunnel.URL,
+	}
+	if includePairing {
+		payload["pairingCode"] = pair.Token
+	}
+	qrPath, qrErr := writeQRCode(payload, qrDir)
+	if jsonOutput {
+		output := map[string]any{
+			"serverUuid":      status.ServerUUID,
+			"listenAddresses": status.ControlAddrs,
+			"tunnelAddress":   status.Tunnel.URL,
+			"qrPath":          qrPath,
+		}
+		if includePairing {
+			output["token"] = pair.Token
+			output["expiresAt"] = pair.ExpiresAt
+		}
+		if qrErr != nil {
+			output["qrError"] = qrErr.Error()
+		}
+		printValue(output)
+		return
+	}
+	if includePairing {
+		fmt.Printf("Pairing code: %s\nExpires: %s\n", pair.Token, formatTime(pair.ExpiresAt))
+	} else {
+		fmt.Println("Connection QR code")
+	}
+	if qrPath != "" {
+		fmt.Printf("QR code: %s\n", qrPath)
+	} else {
+		fmt.Printf("QR code: unavailable (%s)\n", qrErr)
+	}
+}
+
+func writeQRCode(payload any, dir string) (string, error) {
+	tool, err := exec.LookPath("qrencode")
+	if err != nil {
+		return "", errors.New("qrencode is not installed; install qrencode to generate PNG files")
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", fmt.Errorf("create QR directory: %w", err)
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+	path := filepath.Join(dir, fmt.Sprintf("codeoff-%d.png", time.Now().UnixNano()))
+	command := exec.Command(tool, "-o", path, string(data))
+	if output, err := command.CombinedOutput(); err != nil {
+		return "", fmt.Errorf("qrencode: %w (%s)", err, strings.TrimSpace(string(output)))
+	}
+	return filepath.Abs(path)
+}
+
+func printStatus(raw json.RawMessage) {
+	var status overview
+	if err := json.Unmarshal(raw, &status); err != nil {
+		fatal(fmt.Errorf("decode status: %w", err))
+	}
+	fmt.Printf("Server UUID: %s\nControl API: %s\n", status.ServerUUID, status.ControlAddr)
+	fmt.Printf("App-server: %s\n", stateLabel(status.AppServer.Running, status.AppServer.Starting, status.AppServer.Stopping, status.AppServer.Error))
+	fmt.Printf("CF Tunnel: %s", stateLabel(status.Tunnel.Running, status.Tunnel.Starting, status.Tunnel.Stopping, status.Tunnel.Error))
+	if status.Tunnel.URL != "" {
+		fmt.Printf(" (%s)", status.Tunnel.URL)
+	}
+	fmt.Println()
+}
+
+func printDevices(raw json.RawMessage) {
+	var devices []device
+	if err := json.Unmarshal(raw, &devices); err != nil {
+		fatal(fmt.Errorf("decode devices: %w", err))
+	}
+	if len(devices) == 0 {
+		fmt.Println("No devices paired.")
+		return
+	}
+	fmt.Printf("Devices (%d):\n", len(devices))
+	for _, device := range devices {
+		state := "disconnected"
+		if device.Connected {
+			state = "connected"
+		}
+		fmt.Printf("- %s [%s] %s, last seen %s\n", device.Name, device.ID, state, formatTime(device.LastSeen))
+	}
+}
+
+func printAction(message string, raw json.RawMessage) {
+	if jsonOutput {
+		printJSON(raw)
+		return
+	}
+	fmt.Println(message + ".")
+}
+
+func stateLabel(running, starting, stopping bool, errText string) string {
+	if starting {
+		return "starting"
+	}
+	if stopping {
+		return "stopping"
+	}
+	if running {
+		return "running"
+	}
+	if errText != "" {
+		return "error: " + errText
+	}
+	return "stopped"
+}
+
+func formatTime(value string) string {
+	parsed, err := time.Parse(time.RFC3339Nano, value)
+	if err != nil {
+		return value
+	}
+	return parsed.Local().Format("2006-01-02 15:04:05 MST")
+}
+
+func printJSON(value json.RawMessage) {
+	_, _ = os.Stdout.Write(value)
+	_, _ = os.Stdout.Write([]byte{'\n'})
+}
+
+func printValue(value any) {
 	data, err := json.MarshalIndent(value, "", "  ")
 	if err != nil {
 		fatal(err)
 	}
-	fmt.Println(string(data))
+	printJSON(data)
+}
+
+func must(value json.RawMessage, err error) json.RawMessage {
+	if err != nil {
+		fatal(err)
+	}
+	return value
 }
 
 func usage() {
-	path, _ := filepath.Abs(os.Args[0])
-	fmt.Fprintf(os.Stderr, "usage: %s [--state PATH] status|info|pair|devices|revoke ID|restart appserver|tunnel|shutdown\n", filepath.Base(path))
+	name := filepath.Base(os.Args[0])
+	fmt.Fprintf(os.Stderr, `Usage:
+  %s [flags] <command> [arguments]
+
+Commands:
+  status, info             Show daemon and service status
+  devices                  List paired devices
+  pair                     Create a pairing code and QR code
+  connect                  Create a connection QR code
+  revoke DEVICE_ID         Revoke a paired device
+  restart appserver|tunnel Restart a service
+  shutdown                 Request daemon shutdown
+
+Flags:
+  --state PATH             Daemon state file
+  --json                   Print machine-readable JSON
+  --qr-dir DIR             QR output directory (default: current directory)
+
+Examples:
+  %s status
+  %s --json devices
+  %s --qr-dir ./qr pair
+`, name, name, name, name)
 }
 
 func fatal(err error) {
-	fmt.Fprintln(os.Stderr, err)
+	fmt.Fprintln(os.Stderr, "error:", err)
 	os.Exit(1)
 }
