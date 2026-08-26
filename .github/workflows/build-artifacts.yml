@@ -98,16 +98,6 @@ jobs:
             --issuer "$APPLE_API_ISSUER_ID"
           rm "$key_file"
 
-      - name: Generate release metadata
-        run: >-
-          wails3 update build-assets
-          -name codeoff-server
-          -binaryname codeoff-server
-          -productname "Codeoff Server"
-          -config build/config.yml
-          -dir build
-          -productversion ${{ needs.prepare.outputs.version }}
-
       - name: Build macOS app
         run: wails3 task package ARCH=${{ matrix.arch.goarch }} APP_VERSION=${{ needs.prepare.outputs.version }}
 
@@ -177,16 +167,6 @@ jobs:
 
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@$env:WAILS_VERSION
-
-      - name: Generate release metadata
-        run: >-
-          wails3 update build-assets
-          -name codeoff-server
-          -binaryname codeoff-server
-          -productname "Codeoff Server"
-          -config build/config.yml
-          -dir build
-          -productversion ${{ needs.prepare.outputs.version }}
 
       - name: Install NSIS
         uses: repolevedavaj/install-nsis@v1.2.1

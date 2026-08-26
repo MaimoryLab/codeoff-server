@@ -56,7 +56,7 @@ tasks:
   build:cli:
     summary: Builds the daemon and CLI binaries
     cmds:
-      - go build -o "{{.BIN_DIR}}/codeoff-daemon" ./cmd/codeoff-daemon
+      - go build -ldflags="-X github.com/MaimoryLab/codeoff-server/internal/buildinfo.Version={{.APP_VERSION | default "dev"}}" -o "{{.BIN_DIR}}/codeoff-daemon" ./cmd/codeoff-daemon
       - go build -o "{{.BIN_DIR}}/codeoff-cli" ./cmd/codeoff-cli
 
   run:daemon:

@@ -8,13 +8,12 @@ import (
 	"slices"
 	"time"
 
+	"github.com/MaimoryLab/codeoff-server/internal/buildinfo"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/updater"
 	"github.com/wailsapp/wails/v3/pkg/updater/providers/github"
 )
-
-var currentVersion = "dev"
 
 //go:embed all:frontend/dist
 var assets embed.FS
@@ -59,7 +58,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if err := app.Updater.Init(updater.Config{
-		CurrentVersion: currentVersion,
+		CurrentVersion: buildinfo.Version,
 		Providers:      []updater.Provider{githubProvider},
 	}); err != nil {
 		log.Fatal(err)
@@ -150,7 +149,7 @@ func main() {
 	})
 	tray.SetTooltip("Codeoff Server")
 	tray.Run()
-	if currentVersion != "dev" {
+	if buildinfo.Version != "dev" {
 		go runUpdateChecks(app.Context(), 24*time.Hour, func(ctx context.Context) {
 			release, err := app.Updater.Check(ctx)
 			if err != nil {

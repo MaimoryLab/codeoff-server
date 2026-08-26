@@ -10,12 +10,12 @@ import (
 	"sync"
 
 	"github.com/MaimoryLab/codeoff-server/internal/appserver"
+	"github.com/MaimoryLab/codeoff-server/internal/buildinfo"
 	"github.com/MaimoryLab/codeoff-server/internal/devices"
 	"github.com/coder/websocket"
 )
 
 const (
-	serverVersion       = "1.1.0"
 	minClientVersion    = "1.0.0"
 	serverVersionHeader = "X-Codeoff-Server-Version"
 	minClientHeader     = "X-Codeoff-Min-Client-Version"
@@ -55,7 +55,7 @@ func websocketHandler(server *Server, store *devices.Store, appServer AppServer,
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
-		w.Header().Set(serverVersionHeader, serverVersion)
+		w.Header().Set(serverVersionHeader, buildinfo.Version)
 		w.Header().Set(minClientHeader, minClientVersion)
 		conn, err := websocket.Accept(w, r, nil)
 		if err != nil {

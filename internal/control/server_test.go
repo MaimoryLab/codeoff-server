@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/MaimoryLab/codeoff-server/internal/appserver"
+	"github.com/MaimoryLab/codeoff-server/internal/buildinfo"
 	"github.com/MaimoryLab/codeoff-server/internal/devices"
 	"github.com/MaimoryLab/codeoff-server/internal/diagnostics"
 	"github.com/coder/websocket"
@@ -95,7 +96,7 @@ func TestPairExchangeAndWebSocketStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if response.Header.Get(serverVersionHeader) != serverVersion {
+	if response.Header.Get(serverVersionHeader) != buildinfo.Version {
 		t.Fatalf("server version = %q", response.Header.Get(serverVersionHeader))
 	}
 	if response.Header.Get(minClientHeader) != minClientVersion {

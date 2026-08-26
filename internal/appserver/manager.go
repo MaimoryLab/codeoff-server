@@ -8,6 +8,8 @@ import (
 	"io"
 	"sync"
 	"time"
+
+	"github.com/MaimoryLab/codeoff-server/internal/buildinfo"
 )
 
 type State struct {
@@ -83,7 +85,7 @@ func (m *Manager) startLocked(ctx context.Context, executable string) (State, er
 	initialized, err := client.Initialize(initializeCtx, ClientInfo{
 		Name:    "codeoff_server",
 		Title:   "Codeoff Server",
-		Version: "1.1.0",
+		Version: buildinfo.Version,
 	})
 	if err != nil {
 		cancel()
