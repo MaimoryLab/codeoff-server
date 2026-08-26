@@ -211,6 +211,18 @@ func (s *Store) List() []Device {
 	return result
 }
 
+func (s *Store) ConnectedCount() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	count := 0
+	for _, connections := range s.connections {
+		if connections > 0 {
+			count++
+		}
+	}
+	return count
+}
+
 func (s *Store) Connect(id string) func() {
 	s.mu.Lock()
 	s.connections[id]++

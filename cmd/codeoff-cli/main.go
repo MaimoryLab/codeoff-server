@@ -28,11 +28,12 @@ type client struct {
 }
 
 type overview struct {
-	AppServer    runtimeState `json:"appServer"`
-	Tunnel       tunnelState  `json:"tunnel"`
-	ControlAddr  string       `json:"controlAddr"`
-	ControlAddrs []string     `json:"controlAddrs"`
-	ServerUUID   string       `json:"serverUuid"`
+	AppServer        runtimeState `json:"appServer"`
+	Tunnel           tunnelState  `json:"tunnel"`
+	ControlAddr      string       `json:"controlAddr"`
+	ControlAddrs     []string     `json:"controlAddrs"`
+	ServerUUID       string       `json:"serverUuid"`
+	ConnectedClients int          `json:"connectedClients"`
 }
 
 type runtimeState struct {
@@ -90,7 +91,7 @@ func main() {
 	args := flag.Args()
 
 	switch args[0] {
-	case "status", "info":
+	case "status":
 		raw := must(client.get("/api/v1/admin/status"))
 		if jsonOutput {
 			printJSON(raw)
@@ -105,9 +106,9 @@ func main() {
 			printDevices(raw)
 		}
 	case "pair":
-		printPair(client, true)
+		printPair(client)
 	case "connect":
-		printPair(client, false)
+		printConnect(client)
 	case "revoke":
 		if len(args) != 2 {
 			fatal(errors.New("usage: codeoff-cli revoke DEVICE_ID"))
@@ -171,27 +172,58 @@ func (c *client) request(method, path string, body any) (json.RawMessage, error)
 	return bytes.TrimSpace(data), nil
 }
 
-func printPair(c *client, includePairing bool) {
+func printPair(c *client) {
 	statusRaw := must(c.get("/api/v1/admin/status"))
 	var status overview
 	if err := json.Unmarshal(statusRaw, &status); err != nil {
 		fatal(fmt.Errorf("decode daemon status: %w", err))
 	}
 
+	raw := must(c.post("/api/v1/admin/pair", nil))
 	var pair pairing
-	if includePairing {
-		raw := must(c.post("/api/v1/admin/pair", nil))
-		if err := json.Unmarshal(raw, &pair); err != nil {
-			fatal(fmt.Errorf("decode pairing response: %w", err))
-		}
+	if err := json.Unmarshal(raw, &pair); err != nil {
+		fatal(fmt.Errorf("decode pairing response: %w", err))
 	}
 	payload := map[string]any{
 		"serverUuid":      status.ServerUUID,
 		"listenAddresses": status.ControlAddrs,
 		"tunnelAddress":   status.Tunnel.URL,
 	}
-	if includePairing {
-		payload["pairingCode"] = pair.Token
+	payload["pairingCode"] = pair.Token
+	qrPath, qrErr := writeQRCode(payload, qrDir)
+	if jsonOutput {
+		output := map[string]any{
+			"serverUuid":      status.ServerUUID,
+			"listenAddresses": status.ControlAddrs,
+			"tunnelAddress":   status.Tunnel.URL,
+			"qrPath":          qrPath,
+		}
+		output["token"] = pair.Token
+		output["expiresAt"] = pair.ExpiresAt
+		if qrErr != nil {
+			output["qrError"] = qrErr.Error()
+		}
+		printValue(output)
+		return
+	}
+	fmt.Printf("Pairing code: %s\nExpires: %s\n", pair.Token, formatTime(pair.ExpiresAt))
+	if qrPath != "" {
+		fmt.Printf("QR code: %s\n", qrPath)
+	} else {
+		fmt.Printf("QR code: unavailable (%s)\n", qrErr)
+	}
+}
+
+func printConnect(c *client) {
+	statusRaw := must(c.get("/api/v1/admin/status"))
+	var status overview
+	if err := json.Unmarshal(statusRaw, &status); err != nil {
+		fatal(fmt.Errorf("decode daemon status: %w", err))
+	}
+	payload := map[string]any{
+		"serverUuid":      status.ServerUUID,
+		"listenAddresses": status.ControlAddrs,
+		"tunnelAddress":   status.Tunnel.URL,
 	}
 	qrPath, qrErr := writeQRCode(payload, qrDir)
 	if jsonOutput {
@@ -201,21 +233,13 @@ func printPair(c *client, includePairing bool) {
 			"tunnelAddress":   status.Tunnel.URL,
 			"qrPath":          qrPath,
 		}
-		if includePairing {
-			output["token"] = pair.Token
-			output["expiresAt"] = pair.ExpiresAt
-		}
 		if qrErr != nil {
 			output["qrError"] = qrErr.Error()
 		}
 		printValue(output)
 		return
 	}
-	if includePairing {
-		fmt.Printf("Pairing code: %s\nExpires: %s\n", pair.Token, formatTime(pair.ExpiresAt))
-	} else {
-		fmt.Println("Connection QR code")
-	}
+	fmt.Println("Connection QR code")
 	if qrPath != "" {
 		fmt.Printf("QR code: %s\n", qrPath)
 	} else {
@@ -248,7 +272,7 @@ func printStatus(raw json.RawMessage) {
 	if err := json.Unmarshal(raw, &status); err != nil {
 		fatal(fmt.Errorf("decode status: %w", err))
 	}
-	fmt.Printf("Server UUID: %s\nControl API: %s\n", status.ServerUUID, status.ControlAddr)
+	fmt.Printf("Server UUID: %s\nControl API: %s\nConnected clients: %d\n", status.ServerUUID, status.ControlAddr, status.ConnectedClients)
 	fmt.Printf("App-server: %s\n", stateLabel(status.AppServer.Running, status.AppServer.Starting, status.AppServer.Stopping, status.AppServer.Error))
 	fmt.Printf("CF Tunnel: %s", stateLabel(status.Tunnel.Running, status.Tunnel.Starting, status.Tunnel.Stopping, status.Tunnel.Error))
 	if status.Tunnel.URL != "" {
@@ -334,10 +358,10 @@ func usage() {
   %s [flags] <command> [arguments]
 
 Commands:
-  status, info             Show daemon and service status
+  status                   Show daemon and service status
   devices                  List paired devices
-  pair                     Create a pairing code and QR code
   connect                  Create a connection QR code
+  pair                     Create a pairing code and QR code
   revoke DEVICE_ID         Revoke a paired device
   restart appserver|tunnel Restart a service
   shutdown                 Request daemon shutdown

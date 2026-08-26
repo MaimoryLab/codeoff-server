@@ -82,14 +82,14 @@ go build -o bin/codeoff-daemon ./cmd/codeoff-daemon
 go build -o bin/codeoff-cli ./cmd/codeoff-cli
 bin/codeoff-daemon --listen 0.0.0.0:11037 --cf-tunnel --cf-tunnel-mode quick
 bin/codeoff-cli status
-bin/codeoff-cli pair
 bin/codeoff-cli connect
+bin/codeoff-cli pair
 bin/codeoff-cli devices
 bin/codeoff-cli restart appserver
 bin/codeoff-cli restart tunnel
 ```
 
-CLI output is human-readable by default. Add `--json` for machine-readable output; `pair` and `connect` write QR PNG files to the current directory, or to a directory selected with `--qr-dir PATH`. QR generation requires the `qrencode` command.
+CLI output is human-readable by default. Add `--json` for machine-readable output; `connect` writes a connection QR PNG and `pair` writes a pairing QR PNG to the current directory, or to a directory selected with `--qr-dir PATH`. QR generation requires the `qrencode` command.
 
 Use `--cf-tunnel-mode external --cf-tunnel-url https://example.com` for an existing Cloudflare application tunnel. Override the daemon state file with `--state PATH`.
 

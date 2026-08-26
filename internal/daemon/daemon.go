@@ -48,13 +48,14 @@ type StateFile struct {
 }
 
 type Overview struct {
-	Environment  diagnostics.Snapshot `json:"environment"`
-	AppServer    appserver.State      `json:"appServer"`
-	Tunnel       tunnel.State         `json:"tunnel"`
-	ControlAddr  string               `json:"controlAddr"`
-	ControlAddrs []string             `json:"controlAddrs"`
-	ListenAddr   string               `json:"listenAddr"`
-	ServerUUID   string               `json:"serverUuid"`
+	Environment      diagnostics.Snapshot `json:"environment"`
+	AppServer        appserver.State      `json:"appServer"`
+	Tunnel           tunnel.State         `json:"tunnel"`
+	ControlAddr      string               `json:"controlAddr"`
+	ControlAddrs     []string             `json:"controlAddrs"`
+	ListenAddr       string               `json:"listenAddr"`
+	ServerUUID       string               `json:"serverUuid"`
+	ConnectedClients int                  `json:"connectedClients"`
 }
 
 type Service struct {
@@ -231,13 +232,14 @@ func (s *Service) Overview() Overview {
 		controlAddr = server.Addr()
 	}
 	return Overview{
-		Environment:  status,
-		AppServer:    s.app.State(),
-		Tunnel:       s.tunnelState(),
-		ControlAddr:  controlAddr,
-		ControlAddrs: controlAddresses(config.ListenAddr),
-		ListenAddr:   config.ListenAddr,
-		ServerUUID:   s.devices.Server().ID,
+		Environment:      status,
+		AppServer:        s.app.State(),
+		Tunnel:           s.tunnelState(),
+		ControlAddr:      controlAddr,
+		ControlAddrs:     controlAddresses(config.ListenAddr),
+		ListenAddr:       config.ListenAddr,
+		ServerUUID:       s.devices.Server().ID,
+		ConnectedClients: s.devices.ConnectedCount(),
 	}
 }
 

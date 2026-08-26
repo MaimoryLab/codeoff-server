@@ -82,14 +82,14 @@ go build -o bin/codeoff-daemon ./cmd/codeoff-daemon
 go build -o bin/codeoff-cli ./cmd/codeoff-cli
 bin/codeoff-daemon --listen 0.0.0.0:11037 --cf-tunnel --cf-tunnel-mode quick
 bin/codeoff-cli status
-bin/codeoff-cli pair
 bin/codeoff-cli connect
+bin/codeoff-cli pair
 bin/codeoff-cli devices
 bin/codeoff-cli restart appserver
 bin/codeoff-cli restart tunnel
 ```
 
-CLI 默认输出人类可读文本，添加 `--json` 可输出机器可读 JSON。`pair` 和 `connect` 会将二维码 PNG 写入当前目录，也可以通过 `--qr-dir PATH` 指定输出目录。生成二维码需要安装 `qrencode` 命令。
+CLI 默认输出人类可读文本，添加 `--json` 可输出机器可读 JSON。`connect` 会将连接二维码 PNG、`pair` 会将配对二维码 PNG 写入当前目录，也可以通过 `--qr-dir PATH` 指定输出目录。生成二维码需要安装 `qrencode` 命令。
 
 已有 Cloudflare 应用 Tunnel 时，使用 `--cf-tunnel-mode external --cf-tunnel-url https://example.com`。可通过 `--state PATH` 覆盖 daemon 状态文件路径。
 
