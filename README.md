@@ -6,12 +6,12 @@ Codeoff Server is a local-first desktop bridge for controlling Codex from a phon
 
 - Go 1.24+
 - Node.js and pnpm for the frontend
-- Wails 3 CLI pinned to `v3.0.0-beta.12`
+- Wails 3 CLI pinned to `v3.0.0-beta.13`
 
 Install the pinned CLI once:
 
 ```sh
-go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.12
+go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.13
 ```
 
 ## Development

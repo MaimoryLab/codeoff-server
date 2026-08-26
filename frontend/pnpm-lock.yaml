@@ -23,7 +23,7 @@ importers:
         version: 7.0.2
       vite:
         specifier: ^8.2.2
-        version: 8.2.2(@types/node@26.2.0)
+        version: 8.2.2(@types/node@26.3.0)
 
 packages:
 
@@ -129,8 +129,8 @@ packages:
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
-  '@types/node@26.2.0':
-    resolution: {integrity: sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg==}
+  '@types/node@26.3.0':
+    resolution: {integrity: sha512-L3fgrnchriRC2ExBflb8j4uZZURHZfQsmQeyVzhjcHW4kkwVyo8/0h1B2MVzMTrYUJYu6G7EWs14hW/L9putqw==}
 
   '@types/qrcode@1.5.6':
     resolution: {integrity: sha512-te7NQcV2BOvdj2b1hCAHzAoMNuj65kNBMz0KBaxM6c3VGBOhU0dURQKOtH8CFNI/dsKkwlv32p26qYQTWoB5bw==}
@@ -258,16 +258,12 @@ packages:
   '@wailsio/runtime@3.0.0-beta.12':
     resolution: {integrity: sha512-2B456rspX5rDXYhNjRqXNDOPkRXjletGJ4R3beF2FGs7K67MTovLy9acXHYb8nolzL96kygyJ622RIjB45oumg==}
 
-  ansi-regex@4.1.0:
-    resolution: {integrity: sha512-1apePfXM1UOSqw0o9IiFAovVz9M5S1Dg+4TrDwfMewQ6p/rmMueb7tWZjQ1rx4Loy1ArBggoqGpfqqdI4rondg==}
-    engines: {node: '>=6'}
-
-  ansi-regex@5.0.0:
-    resolution: {integrity: sha512-bY6fj56OUQ0hU1KjFNDQuJFezqKdrAyFdIevADiqrWHwSlbmBNMHp5ak2f40Pm8JTFyM2mqxkG6ngkHO11f/lg==}
+  ansi-regex@5.0.1:
+    resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
     engines: {node: '>=8'}
 
-  ansi-styles@4.0.0:
-    resolution: {integrity: sha512-8zjUtFJ3db/QoPXuuEMloS2AUf79/yeyttJ7Abr3hteopJu9HK8vsgGviGUMq+zyA6cZZO6gAyZoMTF6TgaEjA==}
+  ansi-styles@4.3.0:
+    resolution: {integrity: sha512-zbB9rCJAT1rbjiVDb2hqKFHNYLxgtk8NURxZ3IZwD3F6NtxbXZQCnnSi1Lkx+IDohdPlFp222wVALIheZJQSEg==}
     engines: {node: '>=8'}
 
   camelcase@5.3.1:
@@ -407,8 +403,8 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  p-limit@2.2.0:
-    resolution: {integrity: sha512-pZbTJpoUsCzV48Mc9Nh51VbwO0X9cuPFE8gYwx9BTCt9SF8/b7Zljd2fVgOxhIF/HDTKgpVzs+GPhyKfjLLFRQ==}
+  p-limit@2.3.0:
+    resolution: {integrity: sha512-//88mFWSJx8lxCzwdAABTJL2MyWB12+eIY7MDL2SqLmAkeKU9qxRvWuSyTjm3FUmpBEMuFfckAIqEaVGUDxb6w==}
     engines: {node: '>=6'}
 
   p-locate@4.1.0:
@@ -426,8 +422,8 @@ packages:
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
-  picomatch@4.0.5:
-    resolution: {integrity: sha512-RvwwcruNjI1ncT5xRakeyS9Lf8lcItv34KD+aif+VH9kduAyfYBipGh12274xtenIPZ119/R9BdTBa8gAwSh0A==}
+  picomatch@4.0.7:
+    resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
 
   pngjs@5.0.0:
@@ -462,20 +458,12 @@ packages:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
 
-  string-width@4.1.0:
-    resolution: {integrity: sha512-NrX+1dVVh+6Y9dnQ19pR0pP4FiEIlUvdTGn8pw6CKTNq5sgib2nIhmUNT5TAmhWmvKr3WcxBcP3E8nWezuipuQ==}
+  string-width@4.2.3:
+    resolution: {integrity: sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==}
     engines: {node: '>=8'}
 
-  string-width@4.2.0:
-    resolution: {integrity: sha512-zUz5JD+tgqtuDjMhwIg5uFVV3dtqZ9yQJlZVfq4I01/K5Paj5UHj7VyrQOJvzawSVlKpObApbfD0Ed6yJc+1eg==}
-    engines: {node: '>=8'}
-
-  strip-ansi@5.2.0:
-    resolution: {integrity: sha512-DuRs1gKbBqsMKIZlrffwlug8MHkcnpjs5VPmL1PAh+mA30U0DTotfDZ0d2UUsXpPmPmMMJ6W773MaA3J+lbiWA==}
-    engines: {node: '>=6'}
-
-  strip-ansi@6.0.0:
-    resolution: {integrity: sha512-AuvKTrTfQNYNIctbR1K/YGTR1756GycPsg7b9bdV9Duqur4gv6aKqHXah67Z8ImS7WEz5QVcOtlfW2rZEugt6w==}
+  strip-ansi@6.0.1:
+    resolution: {integrity: sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==}
     engines: {node: '>=8'}
 
   tinyglobby@0.2.17:
@@ -547,8 +535,8 @@ packages:
     resolution: {integrity: sha512-o50j0JeToy/4K6OZcaQmW6lyXXKhq7csREXcDwk2omFPJEwUNOVtJKvmDr9EI1fAJZUyZcRF7kxGBWmRXudrCQ==}
     engines: {node: '>=6'}
 
-  yargs@15.3.1:
-    resolution: {integrity: sha512-92O1HWEjw27sBfgmXiixJWT5hRBp2eobqXicLtPBIDBhYB+1HpwZlXmbW2luivBJHBzki+7VyCLRtAkScbTBQA==}
+  yargs@15.4.1:
+    resolution: {integrity: sha512-aePbxDmcYW++PaqBsJ+HYUFwCdv4LVvdnhBy78E57PIor8/OVvhMrADFFEDh8DHDFRv/O9i3lPhsENjO7QX0+A==}
     engines: {node: '>=8'}
 
 snapshots:
@@ -602,13 +590,13 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
-  '@types/node@26.2.0':
+  '@types/node@26.3.0':
     dependencies:
       undici-types: 8.3.0
 
   '@types/qrcode@1.5.6':
     dependencies:
-      '@types/node': 26.2.0
+      '@types/node': 26.3.0
 
   '@typescript/typescript-aix-ppc64@7.0.2':
     optional: true
@@ -672,11 +660,9 @@ snapshots:
 
   '@wailsio/runtime@3.0.0-beta.12': {}
 
-  ansi-regex@4.1.0: {}
+  ansi-regex@5.0.1: {}
 
-  ansi-regex@5.0.0: {}
-
-  ansi-styles@4.0.0:
+  ansi-styles@4.3.0:
     dependencies:
       color-convert: 2.0.1
 
@@ -684,8 +670,8 @@ snapshots:
 
   cliui@6.0.0:
     dependencies:
-      string-width: 4.2.0
-      strip-ansi: 6.0.0
+      string-width: 4.2.3
+      strip-ansi: 6.0.1
       wrap-ansi: 6.2.0
 
   color-convert@2.0.1:
@@ -702,9 +688,9 @@ snapshots:
 
   emoji-regex@8.0.0: {}
 
-  fdir@6.5.0(picomatch@4.0.5):
+  fdir@6.5.0(picomatch@4.0.7):
     optionalDependencies:
-      picomatch: 4.0.5
+      picomatch: 4.0.7
 
   find-up@4.1.0:
     dependencies:
@@ -773,13 +759,13 @@ snapshots:
 
   nanoid@3.3.18: {}
 
-  p-limit@2.2.0:
+  p-limit@2.3.0:
     dependencies:
       p-try: 2.2.0
 
   p-locate@4.1.0:
     dependencies:
-      p-limit: 2.2.0
+      p-limit: 2.3.0
 
   p-try@2.2.0: {}
 
@@ -787,7 +773,7 @@ snapshots:
 
   picocolors@1.1.1: {}
 
-  picomatch@4.0.5: {}
+  picomatch@4.0.7: {}
 
   pngjs@5.0.0: {}
 
@@ -801,7 +787,7 @@ snapshots:
     dependencies:
       dijkstrajs: 1.0.3
       pngjs: 5.0.0
-      yargs: 15.3.1
+      yargs: 15.4.1
 
   require-directory@2.1.1: {}
 
@@ -832,30 +818,20 @@ snapshots:
 
   source-map-js@1.2.1: {}
 
-  string-width@4.1.0:
+  string-width@4.2.3:
     dependencies:
       emoji-regex: 8.0.0
       is-fullwidth-code-point: 3.0.0
-      strip-ansi: 5.2.0
+      strip-ansi: 6.0.1
 
-  string-width@4.2.0:
+  strip-ansi@6.0.1:
     dependencies:
-      emoji-regex: 8.0.0
-      is-fullwidth-code-point: 3.0.0
-      strip-ansi: 6.0.0
-
-  strip-ansi@5.2.0:
-    dependencies:
-      ansi-regex: 4.1.0
-
-  strip-ansi@6.0.0:
-    dependencies:
-      ansi-regex: 5.0.0
+      ansi-regex: 5.0.1
 
   tinyglobby@0.2.17:
     dependencies:
-      fdir: 6.5.0(picomatch@4.0.5)
-      picomatch: 4.0.5
+      fdir: 6.5.0(picomatch@4.0.7)
+      picomatch: 4.0.7
 
   typescript@7.0.2:
     optionalDependencies:
@@ -882,24 +858,24 @@ snapshots:
 
   undici-types@8.3.0: {}
 
-  vite@8.2.2(@types/node@26.2.0):
+  vite@8.2.2(@types/node@26.3.0):
     dependencies:
       lightningcss: 1.33.0
-      picomatch: 4.0.5
+      picomatch: 4.0.7
       postcss: 8.5.26
       rolldown: 1.2.5
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 26.2.0
+      '@types/node': 26.3.0
       fsevents: 2.3.3
 
   which-module@2.0.1: {}
 
   wrap-ansi@6.2.0:
     dependencies:
-      ansi-styles: 4.0.0
-      string-width: 4.1.0
-      strip-ansi: 6.0.0
+      ansi-styles: 4.3.0
+      string-width: 4.2.3
+      strip-ansi: 6.0.1
 
   y18n@4.0.3: {}
 
@@ -908,7 +884,7 @@ snapshots:
       camelcase: 5.3.1
       decamelize: 1.2.0
 
-  yargs@15.3.1:
+  yargs@15.4.1:
     dependencies:
       cliui: 6.0.0
       decamelize: 1.2.0
@@ -917,7 +893,7 @@ snapshots:
       require-directory: 2.1.1
       require-main-filename: 2.0.0
       set-blocking: 2.0.0
-      string-width: 4.2.0
+      string-width: 4.2.3
       which-module: 2.0.1
       y18n: 4.0.3
       yargs-parser: 18.1.3
