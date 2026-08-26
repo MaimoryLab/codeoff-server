@@ -104,10 +104,15 @@ tasks:
     deps:
       - task: build
     cmds:
-      - task: create:appimage
-      - task: create:deb
-      - task: create:rpm
-      - task: create:aur
+      - task: generate:deb
+      - task: generate:rpm
+      - task: generate:aur
+      - task: create:ota
+
+  create:ota:
+    summary: Creates the Linux OTA archive
+    cmds:
+      - '(cd "{{.BIN_DIR}}" && rm -f "ota-{{.APP_NAME}}-linux-{{.ARCH | default ARCH}}.zip" && zip -q "ota-{{.APP_NAME}}-linux-{{.ARCH | default ARCH}}.zip" "{{.APP_NAME}}")'
 
   create:appimage:
     summary: Creates an AppImage

@@ -152,6 +152,12 @@ tasks:
       DMG_WINDOW_HEIGHT: '{{.DMG_WINDOW_HEIGHT | default "380"}}'
       DMG_FILES: '{{.DMG_FILES | default ""}}'
 
+  create:ota:
+    summary: Creates the macOS OTA archive from an existing app bundle
+    platforms: [darwin]
+    cmds:
+      - '(cd "{{.BIN_DIR}}" && rm -f "ota-{{.APP_NAME}}-darwin-{{.ARCH | default ARCH}}.zip" && zip -qry "ota-{{.APP_NAME}}-darwin-{{.ARCH | default ARCH}}.zip" "{{.APP_NAME}}.app")'
+
 
   create:app:bundle:
     summary: Creates an `.app` bundle

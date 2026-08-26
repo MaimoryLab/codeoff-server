@@ -119,6 +119,9 @@ jobs:
           --notarize
           --keychain-profile codeoff-notary
 
+      - name: Package macOS OTA archive
+        run: wails3 task darwin:create:ota ARCH=${{ matrix.arch.goarch }}
+
       - name: Package macOS DMG
         run: wails3 task darwin:create:dmg
 
@@ -137,7 +140,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: installer-macos-${{ matrix.arch.label }}
-          path: bin/codeoff-server-darwin-${{ matrix.arch.goarch }}.dmg
+          path: |
+            bin/codeoff-server-darwin-${{ matrix.arch.goarch }}.dmg
+            bin/ota-codeoff-server-darwin-${{ matrix.arch.goarch }}.zip
           if-no-files-found: error
 
   windows:
@@ -195,7 +200,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: installer-windows-${{ matrix.arch.label }}
-          path: bin/codeoff-server-${{ matrix.arch.goarch }}-installer.exe
+          path: |
+            bin/codeoff-server-${{ matrix.arch.goarch }}-installer.exe
+            bin/ota-codeoff-server-windows-${{ matrix.arch.goarch }}.zip
           if-no-files-found: error
 
   linux:
@@ -255,10 +262,10 @@ jobs:
         with:
           name: installer-linux-${{ matrix.arch.label }}
           path: |
-            bin/codeoff-server-${{ matrix.arch.goarch }}.AppImage
             bin/codeoff-server-linux-${{ matrix.arch.goarch }}.deb
             bin/codeoff-server-linux-${{ matrix.arch.goarch }}.rpm
             bin/codeoff-server-linux-${{ matrix.arch.goarch }}.pkg.tar.zst
+            bin/ota-codeoff-server-linux-${{ matrix.arch.goarch }}.zip
           if-no-files-found: error
 
   release:
@@ -287,14 +294,18 @@ jobs:
             codeoff-server-darwin-arm64.dmg
             codeoff-server-amd64-installer.exe
             codeoff-server-arm64-installer.exe
-            codeoff-server-amd64.AppImage
-            codeoff-server-arm64.AppImage
             codeoff-server-linux-amd64.deb
             codeoff-server-linux-arm64.deb
             codeoff-server-linux-amd64.rpm
             codeoff-server-linux-arm64.rpm
             codeoff-server-linux-amd64.pkg.tar.zst
             codeoff-server-linux-arm64.pkg.tar.zst
+            ota-codeoff-server-darwin-amd64.zip
+            ota-codeoff-server-darwin-arm64.zip
+            ota-codeoff-server-windows-amd64.zip
+            ota-codeoff-server-windows-arm64.zip
+            ota-codeoff-server-linux-amd64.zip
+            ota-codeoff-server-linux-arm64.zip
           )
           mapfile -t assets < <(find release-assets -maxdepth 1 -type f -printf '%f\n' | sort)
           diff <(printf '%s\n' "${expected[@]}" | sort) <(printf '%s\n' "${assets[@]}")

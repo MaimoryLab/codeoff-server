@@ -100,9 +100,18 @@ tasks:
       - task: '{{if eq (.FORMAT | default "nsis") "msix"}}create:msix:package{{else}}create:nsis:installer{{end}}'
         vars:
           INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
+      - task: create:ota
     vars:
       FORMAT: '{{.FORMAT | default "nsis"}}'
       INSTALL_SCOPE: '{{.INSTALL_SCOPE | default "machine"}}'
+
+  create:ota:
+    summary: Creates the Windows OTA archive
+    cmds:
+      - cmd: powershell -NoProfile -Command "Compress-Archive -Force -Path '{{.BIN_DIR}}/{{.APP_NAME}}.exe' -DestinationPath '{{.BIN_DIR}}/ota-{{.APP_NAME}}-windows-{{.ARCH | default ARCH}}.zip'"
+        platforms: [windows]
+      - cmd: '(cd "{{.BIN_DIR}}" && rm -f "ota-{{.APP_NAME}}-windows-{{.ARCH | default ARCH}}.zip" && zip -q "ota-{{.APP_NAME}}-windows-{{.ARCH | default ARCH}}.zip" "{{.APP_NAME}}.exe")'
+        platforms: [linux, darwin]
 
   generate:syso:
     summary: Generates Windows `.syso` file
