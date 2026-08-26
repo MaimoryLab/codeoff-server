@@ -9,17 +9,19 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/MaimoryLab/codeoff-server/internal/daemon"
+	"github.com/mdp/qrterminal/v3"
+	qrcode "github.com/skip2/go-qrcode"
 )
 
 var (
 	jsonOutput bool
 	qrDir      string
+	qrTerminal bool
 )
 
 type client struct {
@@ -68,6 +70,7 @@ func main() {
 	statePath := flag.String("state", "", "daemon state file")
 	flag.BoolVar(&jsonOutput, "json", false, "print machine-readable JSON")
 	flag.StringVar(&qrDir, "qr-dir", ".", "directory for generated QR code PNG files")
+	flag.BoolVar(&qrTerminal, "qr-terminal", false, "render the QR code in the terminal")
 	flag.Usage = usage
 	flag.Parse()
 	if flag.NArg() == 0 {
@@ -207,6 +210,10 @@ func printPair(c *client) {
 		return
 	}
 	fmt.Printf("Pairing code: %s\nExpires: %s\n", pair.Token, formatTime(pair.ExpiresAt))
+	if qrTerminal {
+		fmt.Println("QR code:")
+		printTerminalQRCode(payload)
+	}
 	if qrPath != "" {
 		fmt.Printf("QR code: %s\n", qrPath)
 	} else {
@@ -240,6 +247,10 @@ func printConnect(c *client) {
 		return
 	}
 	fmt.Println("Connection QR code")
+	if qrTerminal {
+		fmt.Println("QR code:")
+		printTerminalQRCode(payload)
+	}
 	if qrPath != "" {
 		fmt.Printf("QR code: %s\n", qrPath)
 	} else {
@@ -248,9 +259,8 @@ func printConnect(c *client) {
 }
 
 func writeQRCode(payload any, dir string) (string, error) {
-	tool, err := exec.LookPath("qrencode")
-	if err != nil {
-		return "", errors.New("qrencode is not installed; install qrencode to generate PNG files")
+	if dir == "" {
+		dir = "."
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", fmt.Errorf("create QR directory: %w", err)
@@ -260,11 +270,18 @@ func writeQRCode(payload any, dir string) (string, error) {
 		return "", err
 	}
 	path := filepath.Join(dir, fmt.Sprintf("codeoff-%d.png", time.Now().UnixNano()))
-	command := exec.Command(tool, "-o", path, string(data))
-	if output, err := command.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("qrencode: %w (%s)", err, strings.TrimSpace(string(output)))
+	if err := qrcode.WriteFile(string(data), qrcode.Medium, 512, path); err != nil {
+		return "", fmt.Errorf("write QR code: %w", err)
 	}
 	return filepath.Abs(path)
+}
+
+func printTerminalQRCode(payload any) {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		fatal(fmt.Errorf("encode QR payload: %w", err))
+	}
+	qrterminal.GenerateHalfBlock(string(data), qrterminal.M, os.Stdout)
 }
 
 func printStatus(raw json.RawMessage) {
@@ -370,6 +387,7 @@ Flags:
   --state PATH             Daemon state file
   --json                   Print machine-readable JSON
   --qr-dir DIR             QR output directory (default: current directory)
+  --qr-terminal             Render QR code in the terminal
 
 Examples:
   %s status

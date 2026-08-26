@@ -5,6 +5,8 @@ go 1.27.0
 require (
 	github.com/coder/websocket v1.8.15
 	github.com/godbus/dbus/v5 v5.2.2
+	github.com/mdp/qrterminal/v3 v3.2.1
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/wailsapp/wails/v3 v3.0.0-beta.13
 	golang.org/x/sys v0.47.0
 )
@@ -16,4 +18,6 @@ require (
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	golang.org/x/mod v0.37.0 // indirect
+	golang.org/x/term v0.44.0 // indirect
+	rsc.io/qr v0.2.0 // indirect
 )

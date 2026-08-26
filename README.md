@@ -89,7 +89,7 @@ bin/codeoff-cli restart appserver
 bin/codeoff-cli restart tunnel
 ```
 
-CLI output is human-readable by default. Add `--json` for machine-readable output; `connect` writes a connection QR PNG and `pair` writes a pairing QR PNG to the current directory, or to a directory selected with `--qr-dir PATH`. QR generation requires the `qrencode` command.
+CLI output is human-readable by default. Add `--json` for machine-readable output; `connect` writes a connection QR PNG and `pair` writes a pairing QR PNG to the current directory, or to a directory selected with `--qr-dir PATH`. Add `--qr-terminal` to render the QR in the terminal.
 
 Use `--cf-tunnel-mode external --cf-tunnel-url https://example.com` for an existing Cloudflare application tunnel. Override the daemon state file with `--state PATH`.
 
