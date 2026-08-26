@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/MaimoryLab/codex-server/internal/appserver"
-	"github.com/MaimoryLab/codex-server/internal/devices"
-	"github.com/MaimoryLab/codex-server/internal/diagnostics"
+	"github.com/MaimoryLab/codeoff-server/internal/appserver"
+	"github.com/MaimoryLab/codeoff-server/internal/devices"
+	"github.com/MaimoryLab/codeoff-server/internal/diagnostics"
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 )

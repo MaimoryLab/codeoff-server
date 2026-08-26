@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/MaimoryLab/codex-server/internal/appserver"
+	"github.com/MaimoryLab/codeoff-server/internal/appserver"
 )
 
 func TestEventHubBroadcastsToEachSubscriber(t *testing.T) {

@@ -33,7 +33,7 @@ func main() {
 	}
 
 	app := application.New(application.Options{
-		Name:        "Codex Remote",
+		Name:        "Codeoff Server",
 		Description: "Local Codex remote control",
 		Services:    []application.Service{application.NewService(service)},
 		Assets: application.AssetOptions{
@@ -45,7 +45,7 @@ func main() {
 	})
 
 	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:            "Codex Remote",
+		Title:            "Codeoff Server",
 		Width:            900,
 		Height:           600,
 		BackgroundColour: application.NewRGB(16, 18, 24),
@@ -119,7 +119,7 @@ func main() {
 		updateTrayMenu()
 		tray.ShowMenu()
 	})
-	tray.SetTooltip("Codex Remote")
+	tray.SetTooltip("Codeoff Server")
 	tray.Run()
 
 	if err := app.Run(); err != nil {

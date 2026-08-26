@@ -1,6 +1,6 @@
-# Codex Remote
+# Codeoff Server
 
-Codex Remote is a local-first desktop bridge for controlling Codex from a phone. The Wails 3 desktop process owns the local HTTP API, environment checks, Codex process, and Cloudflare Tunnel.
+Codeoff Server is a local-first desktop bridge for controlling Codex from a phone. The Wails 3 desktop process owns the local HTTP API, environment checks, Codex process, and Cloudflare Tunnel.
 
 ## Requirements
 
@@ -36,4 +36,4 @@ Pair exchange is the only HTTP API. All authenticated requests and server events
 wails3 build
 ```
 
-The generated binary is written to `bin/codexremote`.
+The generated binary is written to `bin/codeoff-server`.

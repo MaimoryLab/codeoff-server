@@ -13,8 +13,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/MaimoryLab/codex-server/internal/appserver"
-	"github.com/MaimoryLab/codex-server/internal/devices"
+	"github.com/MaimoryLab/codeoff-server/internal/appserver"
+	"github.com/MaimoryLab/codeoff-server/internal/devices"
 )
 
 const maxUploadSize = 25 << 20

@@ -84,7 +84,7 @@ func (s *Store) initServer() (*Store, error) {
 	}
 	name, err := os.Hostname()
 	if err != nil || name == "" {
-		name = "Codex Remote"
+		name = "Codeoff Server"
 	}
 	s.server = Server{ID: id, Name: name}
 	if err := s.saveLocked(); err != nil {

@@ -8,13 +8,13 @@
         AllowPromptForPassword="false">
     </Settings>
     <Installer
-        Path="codexremote"
+        Path="codeoff-server"
         Arguments=""
-        InstallLocation="C:\Program Files\MaimoryLab\Codex Remote">
+        InstallLocation="C:\Program Files\MaimoryLab\Codeoff Server">
     </Installer>
     <PackageInformation
-        PackageName="Codex Remote"
-        PackageDisplayName="Codex Remote"
+        PackageName="Codeoff Server"
+        PackageDisplayName="Codeoff Server"
         PublisherName="CN=MaimoryLab"
         PublisherDisplayName="MaimoryLab"
         Version="0.1.0.0"
@@ -25,10 +25,10 @@
         </Capabilities>
         <Applications>
             <Application
-                Id="com.maimorylab.codexremote"
+                Id="ai.maimory.codeoff-server"
                 Description="Local Codex remote control"
-                DisplayName="Codex Remote"
-                ExecutableName="codexremote"
+                DisplayName="Codeoff Server"
+                ExecutableName="codeoff-server"
                 EntryPoint="Windows.FullTrustApplication">
                 
             </Application>
@@ -41,13 +41,13 @@
         </Dependencies>
         <Properties>
             <Framework>false</Framework>
-            <DisplayName>Codex Remote</DisplayName>
+            <DisplayName>Codeoff Server</DisplayName>
             <PublisherDisplayName>MaimoryLab</PublisherDisplayName>
             <Description>Local Codex remote control</Description>
             <Logo>Assets\AppIcon.png</Logo>
         </Properties>
     </PackageInformation>
-    <SaveLocation PackagePath="codexremote.msix" />
+    <SaveLocation PackagePath="codeoff-server.msix" />
     <PackageIntegrity>
         <CertificatePath></CertificatePath>
     </PackageIntegrity>

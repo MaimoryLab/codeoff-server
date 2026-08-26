@@ -1,13 +1,13 @@
 [Desktop Entry]
 Version=1.0
-Name=Codex Remote
+Name=Codeoff Server
 Comment=Local Codex remote control
 # The Exec line includes %u to pass the URL to the application
-Exec=/usr/local/bin/codexremote %u
+Exec=/usr/local/bin/codeoff-server %u
 Terminal=false
 Type=Application
-Icon=codexremote
+Icon=codeoff-server
 Categories=Utility;
-StartupWMClass=codexremote
+StartupWMClass=codeoff-server
 
  

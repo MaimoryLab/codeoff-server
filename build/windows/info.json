@@ -7,9 +7,8 @@
 			"ProductVersion": "0.1.0",
 			"CompanyName": "MaimoryLab",
 			"FileDescription": "Local Codex remote control",
-			"LegalCopyright": "© 2026, My Company",
-			"ProductName": "Codex Remote",
-			"Comments": "This is a comment"
+			"LegalCopyright": "© 2026, MaimoryLab",
+			"ProductName": "Codeoff Server"
 		}
 	}
 }

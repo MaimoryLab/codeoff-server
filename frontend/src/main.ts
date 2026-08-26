@@ -1,5 +1,5 @@
-import {AppService} from "../bindings/github.com/MaimoryLab/codex-server";
-import type {Snapshot, ToolStatus} from "../bindings/github.com/MaimoryLab/codex-server/internal/diagnostics/models.js";
+import {AppService} from "../bindings/github.com/MaimoryLab/codeoff-server";
+import type {Snapshot, ToolStatus} from "../bindings/github.com/MaimoryLab/codeoff-server/internal/diagnostics/models.js";
 import {Clipboard} from "@wailsio/runtime";
 import QRCode from "qrcode";
 

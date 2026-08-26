@@ -16,13 +16,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/MaimoryLab/codex-server/internal/appserver"
-	"github.com/MaimoryLab/codex-server/internal/awake"
-	"github.com/MaimoryLab/codex-server/internal/control"
-	"github.com/MaimoryLab/codex-server/internal/devices"
-	"github.com/MaimoryLab/codex-server/internal/diagnostics"
-	"github.com/MaimoryLab/codex-server/internal/installer"
-	"github.com/MaimoryLab/codex-server/internal/tunnel"
+	"github.com/MaimoryLab/codeoff-server/internal/appserver"
+	"github.com/MaimoryLab/codeoff-server/internal/awake"
+	"github.com/MaimoryLab/codeoff-server/internal/control"
+	"github.com/MaimoryLab/codeoff-server/internal/devices"
+	"github.com/MaimoryLab/codeoff-server/internal/diagnostics"
+	"github.com/MaimoryLab/codeoff-server/internal/installer"
+	"github.com/MaimoryLab/codeoff-server/internal/tunnel"
 )
 
 const defaultListenAddr = "127.0.0.1:11037"

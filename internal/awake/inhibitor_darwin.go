@@ -10,7 +10,7 @@ static IOReturn acquireSleepAssertion(IOPMAssertionID *id) {
 	return IOPMAssertionCreateWithName(
 		kIOPMAssertionTypePreventUserIdleSystemSleep,
 		kIOPMAssertionLevelOn,
-		CFSTR("Codex Remote app-server is running"),
+		CFSTR("Codeoff Server app-server is running"),
 		id
 	);
 }

@@ -15,7 +15,7 @@ func acquire() (func() error, error) {
 	}
 	var fd dbus.UnixFD
 	err = connection.Object("org.freedesktop.login1", "/org/freedesktop/login1").
-		Call("org.freedesktop.login1.Manager.Inhibit", 0, "sleep", "Codex Remote", "app-server is running", "block").
+		Call("org.freedesktop.login1.Manager.Inhibit", 0, "sleep", "Codeoff Server", "app-server is running", "block").
 		Store(&fd)
 	if err != nil {
 		return nil, err

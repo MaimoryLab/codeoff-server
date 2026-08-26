@@ -3,7 +3,7 @@
 #
 # The lines below are called `modelines`. See `:help modeline`
 
-name: "codexremote"
+name: "codeoff-server"
 arch: ${GOARCH}
 platform: "linux"
 version: "0.1.0"
@@ -17,12 +17,12 @@ license: "MIT"
 release: "1"
 
 contents:
-  - src: "./bin/codexremote"
-    dst: "/usr/local/bin/codexremote"
+  - src: "./bin/codeoff-server"
+    dst: "/usr/local/bin/codeoff-server"
   - src: "./build/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/codexremote.png"
-  - src: "./build/linux/codexremote.desktop"
-    dst: "/usr/share/applications/codexremote.desktop"
+    dst: "/usr/share/icons/hicolor/128x128/apps/codeoff-server.png"
+  - src: "./build/linux/codeoff-server.desktop"
+    dst: "/usr/share/applications/codeoff-server.desktop"
 
 # Default dependencies for the GTK4 + WebKitGTK 6.0 stack (Ubuntu 24.04+ / Debian 13+)
 depends:

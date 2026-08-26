@@ -30,7 +30,7 @@ type reasonContext struct {
 }
 
 func acquire() (func() error, error) {
-	reason, err := windows.UTF16PtrFromString("Codex Remote app-server is running")
+	reason, err := windows.UTF16PtrFromString("Codeoff Server app-server is running")
 	if err != nil {
 		return nil, err
 	}

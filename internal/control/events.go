@@ -3,7 +3,7 @@ package control
 import (
 	"sync"
 
-	"github.com/MaimoryLab/codex-server/internal/appserver"
+	"github.com/MaimoryLab/codeoff-server/internal/appserver"
 )
 
 type eventHub struct {

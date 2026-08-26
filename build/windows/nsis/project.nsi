@@ -21,7 +21,7 @@ Unicode true
 ####
 ## !define INFO_PROJECTNAME    "my-project" # Default "CodexRemote"
 ## !define INFO_COMPANYNAME    "My Company" # Default "MaimoryLab"
-## !define INFO_PRODUCTNAME    "My Product Name" # Default "Codex Remote"
+## !define INFO_PRODUCTNAME    "My Product Name" # Default "Codeoff Server"
 ## !define INFO_PRODUCTVERSION "1.0.0"     # Default "0.1.0"
 ## !define INFO_COPYRIGHT      "(c) Now, My Company" # Default "© 2026, My Company"
 ###

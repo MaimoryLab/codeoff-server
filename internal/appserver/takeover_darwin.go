@@ -53,7 +53,7 @@ func terminateThreadOwner(ctx context.Context, codexHome, threadID string) error
 		return errors.New("thread owner changed; retry takeover")
 	}
 	if target.pid == os.Getpid() {
-		return errors.New("refusing to terminate codex-server")
+		return errors.New("refusing to terminate codeoff-server")
 	}
 	process, err := os.FindProcess(target.pid)
 	if err != nil {

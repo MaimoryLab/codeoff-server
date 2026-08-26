@@ -82,7 +82,7 @@ func (m *Manager) startLocked(ctx context.Context, executable string) (State, er
 	defer initializeCancel()
 	initialized, err := client.Initialize(initializeCtx, ClientInfo{
 		Name:    "codex_remote",
-		Title:   "Codex Remote",
+		Title:   "Codeoff Server",
 		Version: "0.1.0",
 	})
 	if err != nil {

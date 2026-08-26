@@ -6,11 +6,11 @@ version: '3'
 # This information is used to generate the build assets.
 info:
   companyName: "MaimoryLab" # The name of the company
-  productName: "Codex Remote" # The name of the application
-  productIdentifier: "com.maimorylab.codexremote" # The unique product identifier
+  productName: "Codeoff Server" # The name of the application
+  productIdentifier: "ai.maimory.codeoff-server" # The unique product identifier
   description: "Local Codex remote control" # The application description
   copyright: "(c) 2026, MaimoryLab" # Copyright text
-  comments: "Codex Remote desktop bridge" # Comments
+  comments: "Codeoff Server desktop bridge" # Comments
   version: "0.1.0" # The application version
   # cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
   #                               # Should match the name of your .icon file without the extension

@@ -1,4 +1,4 @@
-module github.com/MaimoryLab/codex-server
+module github.com/MaimoryLab/codeoff-server
 
 go 1.27.0
 
