@@ -51,14 +51,36 @@ type AppServer interface {
 	Events() <-chan appserver.Event
 }
 
+// AdminController is the local daemon control plane. Its endpoints are
+// protected by the admin bearer token passed to NewWithOptions.
+type AdminController interface {
+	Status(context.Context) any
+	NewPairing() (devices.Pairing, error)
+	Devices() []devices.Device
+	RevokeDevice(string) error
+	RestartAppServer() error
+	RestartTunnel() error
+	Shutdown() error
+}
+
+type Options struct {
+	AppServers []AppServer
+	Admin      AdminController
+	AdminToken string
+}
+
 func New[T any](status func(context.Context) T, deviceStore *devices.Store, appServers ...AppServer) *Server {
+	return NewWithOptions(status, deviceStore, Options{AppServers: appServers})
+}
+
+func NewWithOptions[T any](status func(context.Context) T, deviceStore *devices.Store, options Options) *Server {
 	server := &Server{
 		uploads: make(map[string]bool),
 		status:  func(ctx context.Context) any { return status(ctx) },
 	}
 	var appServer AppServer
-	if len(appServers) > 0 {
-		appServer = appServers[0]
+	if len(options.AppServers) > 0 {
+		appServer = options.AppServers[0]
 	}
 	var events *eventHub
 	if appServer != nil {
@@ -89,8 +111,86 @@ func New[T any](status func(context.Context) T, deviceStore *devices.Store, appS
 	})
 	mux.HandleFunc("POST /api/v1/upload", uploadHandler(server, deviceStore))
 	mux.HandleFunc("GET /api/v1/ws", websocketHandler(server, deviceStore, appServer, events))
+	if options.Admin != nil && options.AdminToken != "" {
+		server.addAdminRoutes(mux, options.Admin, options.AdminToken)
+	}
 	server.httpServer = &http.Server{Handler: mux}
 	return server
+}
+
+func (s *Server) addAdminRoutes(mux *http.ServeMux, admin AdminController, token string) {
+	authorized := func(r *http.Request) bool {
+		return r.Header.Get("Authorization") == "Bearer "+token
+	}
+	guard := func(w http.ResponseWriter, r *http.Request) bool {
+		if authorized(r) {
+			return true
+		}
+		w.Header().Set("WWW-Authenticate", "Bearer")
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return false
+	}
+	mux.HandleFunc("GET /api/v1/admin/status", func(w http.ResponseWriter, r *http.Request) {
+		if !guard(w, r) {
+			return
+		}
+		writeJSON(w, admin.Status(r.Context()))
+	})
+	mux.HandleFunc("GET /api/v1/admin/devices", func(w http.ResponseWriter, r *http.Request) {
+		if !guard(w, r) {
+			return
+		}
+		writeJSON(w, admin.Devices())
+	})
+	mux.HandleFunc("POST /api/v1/admin/pair", func(w http.ResponseWriter, r *http.Request) {
+		if !guard(w, r) {
+			return
+		}
+		pairing, err := admin.NewPairing()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, pairing)
+	})
+	mux.HandleFunc("POST /api/v1/admin/revoke", func(w http.ResponseWriter, r *http.Request) {
+		if !guard(w, r) {
+			return
+		}
+		var request struct {
+			ID string `json:"id"`
+		}
+		if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4<<10)).Decode(&request); err != nil || strings.TrimSpace(request.ID) == "" {
+			http.Error(w, "device id is required", http.StatusBadRequest)
+			return
+		}
+		if err := admin.RevokeDevice(request.ID); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeJSON(w, map[string]bool{"ok": true})
+	})
+	for path, action := range map[string]func() error{
+		"/api/v1/admin/restart/appserver": admin.RestartAppServer,
+		"/api/v1/admin/restart/tunnel":    admin.RestartTunnel,
+		"/api/v1/admin/shutdown":          admin.Shutdown,
+	} {
+		mux.HandleFunc("POST "+path, func(w http.ResponseWriter, r *http.Request) {
+			if !guard(w, r) {
+				return
+			}
+			if path == "/api/v1/admin/shutdown" {
+				go action()
+				writeJSON(w, map[string]bool{"ok": true})
+				return
+			}
+			if err := action(); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			writeJSON(w, map[string]bool{"ok": true})
+		})
+	}
 }
 
 func uploadHandler(server *Server, store *devices.Store) http.HandlerFunc {
