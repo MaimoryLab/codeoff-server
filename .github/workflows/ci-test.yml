@@ -25,15 +25,19 @@ jobs:
           go-version-file: go.mod
           cache-dependency-path: go.sum
 
+      - name: Install Wails build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-4-dev \
+            libwebkitgtk-6.0-dev
+
       - run: go vet ./...
 
       # -race because the write coordination lock in internal/app is the kind of
       # thing a plain run will not exercise.
       - run: go test -race ./...
 
-      # The Linux CI runner does not provide Wails' GTK/WebKitGTK native
-      # libraries. The default package graph still checks the portable Go code;
-      # target-specific release builds run in build-artifacts.yml.
       - uses: dominikh/staticcheck-action@v1.4.1
         with:
           install-go: false
