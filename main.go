@@ -6,6 +6,7 @@ import (
 	"log"
 	"runtime"
 	"slices"
+	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -63,6 +64,11 @@ func main() {
 	}); err != nil {
 		log.Fatal(err)
 	}
+	showUpdateCheck := func(ctx context.Context) {
+		if err := app.Updater.CheckAndInstall(ctx); err != nil {
+			log.Printf("check for updates: %v", err)
+		}
+	}
 
 	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "Codeoff Server",
@@ -114,11 +120,7 @@ func main() {
 	})
 	menu.AddSeparator()
 	menu.Add("检查更新").OnClick(func(*application.Context) {
-		go func() {
-			if err := app.Updater.CheckAndInstall(context.Background()); err != nil {
-				log.Printf("check for updates: %v", err)
-			}
-		}()
+		go showUpdateCheck(context.Background())
 	})
 	menu.Add("打开控制面板").OnClick(func(*application.Context) { window.Show().Focus() })
 	menu.Add("退出").OnClick(func(*application.Context) { app.Quit() })
@@ -148,9 +150,33 @@ func main() {
 	})
 	tray.SetTooltip("Codeoff Server")
 	tray.Run()
+	if currentVersion != "dev" {
+		go runUpdateChecks(app.Context(), 24*time.Hour, func(ctx context.Context) {
+			release, err := app.Updater.Check(ctx)
+			if err != nil {
+				log.Printf("background update check: %v", err)
+			} else if release != nil {
+				showUpdateCheck(ctx)
+			}
+		})
+	}
 
 	if err := app.Run(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func runUpdateChecks(ctx context.Context, interval time.Duration, check func(context.Context)) {
+	check(ctx)
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			check(ctx)
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 
