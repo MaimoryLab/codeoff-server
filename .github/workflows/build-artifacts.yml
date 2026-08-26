@@ -139,3 +139,124 @@ jobs:
           name: installer-macos-${{ matrix.arch.label }}
           path: bin/codeoff-server-darwin-${{ matrix.arch.goarch }}.dmg
           if-no-files-found: error
+
+  windows:
+    needs: prepare
+    name: Build Windows ${{ matrix.arch.label }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - {label: x64, goarch: amd64}
+          - {label: arm64, goarch: arm64}
+
+    env:
+      CGO_ENABLED: 0
+      GOARCH: ${{ matrix.arch.goarch }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - uses: pnpm/setup@v2
+        with:
+          package-json-file: frontend/package.json
+          runtime: node@26
+          cache: true
+          cache-dependency-path: frontend/pnpm-lock.yaml
+          install: false
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@$env:WAILS_VERSION
+
+      - name: Generate release metadata
+        run: >-
+          wails3 update build-assets
+          -name codeoff-server
+          -binaryname codeoff-server
+          -config build/config.yml
+          -dir build
+          -productversion ${{ needs.prepare.outputs.version }}
+
+      - name: Install NSIS
+        uses: repolevedavaj/install-nsis@v1.2.1
+        with:
+          nsis-version: '3.12'
+
+      - name: Package Windows installer
+        run: wails3 task package ARCH=${{ matrix.arch.goarch }}
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: installer-windows-${{ matrix.arch.label }}
+          path: bin/codeoff-server-${{ matrix.arch.goarch }}-installer.exe
+          if-no-files-found: error
+
+  linux:
+    needs: prepare
+    name: Build Linux ${{ matrix.arch.label }}
+    runs-on: ${{ matrix.arch.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - {label: x64, goarch: amd64, runner: ubuntu-24.04}
+          - {label: arm64, goarch: arm64, runner: ubuntu-24.04-arm}
+
+    env:
+      CGO_ENABLED: 1
+      GIT_COMMITTER_EMAIL: support@maimory.ai
+      GIT_COMMITTER_NAME: MaimoryLab
+      GOARCH: ${{ matrix.arch.goarch }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - uses: pnpm/setup@v2
+        with:
+          package-json-file: frontend/package.json
+          runtime: node@26
+          cache: true
+          cache-dependency-path: frontend/pnpm-lock.yaml
+          install: false
+
+      - name: Install GTK4 build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            pkg-config \
+            libgtk-4-dev \
+            libwebkitgtk-6.0-dev
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@$WAILS_VERSION
+
+      - name: Package Linux artifacts
+        run: >-
+          wails3 task package
+          ARCH=${{ matrix.arch.goarch }}
+          VERSION=${{ needs.prepare.outputs.version }}
+          PACKAGE_NAME=codeoff-server-linux-${{ matrix.arch.goarch }}
+
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: installer-linux-${{ matrix.arch.label }}
+          path: |
+            bin/codeoff-server-${{ matrix.arch.goarch }}.AppImage
+            bin/codeoff-server-linux-${{ matrix.arch.goarch }}.deb
+            bin/codeoff-server-linux-${{ matrix.arch.goarch }}.rpm
+            bin/codeoff-server-linux-${{ matrix.arch.goarch }}.pkg.tar.zst
+          if-no-files-found: error
