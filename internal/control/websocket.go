@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -63,7 +64,11 @@ func websocketHandler(server *Server, store *devices.Store, appServer AppServer,
 		conn.SetReadLimit(1 << 20)
 		defer conn.Close(websocket.StatusNormalClosure, "")
 		disconnect := store.Connect(device.ID)
-		defer disconnect()
+		log.Printf("device connected: id=%s name=%q remote=%s", device.ID, device.Name, r.RemoteAddr)
+		defer func() {
+			disconnect()
+			log.Printf("device disconnected: id=%s name=%q remote=%s", device.ID, device.Name, r.RemoteAddr)
+		}()
 
 		ctx, cancel := context.WithCancel(r.Context())
 		defer cancel()

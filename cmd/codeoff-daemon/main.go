@@ -27,6 +27,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	log.Printf("starting daemon: listen=%s cf_tunnel=%t mode=%s", config.ListenAddr, config.CFTunnel, config.CFTunnelMode)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	if err := service.Run(ctx); err != nil {

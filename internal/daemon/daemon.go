@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/url"
 	"os"
@@ -152,6 +153,7 @@ func (s *Service) Start(ctx context.Context) error {
 	if err := server.Start(config.ListenAddr); err != nil {
 		return err
 	}
+	log.Printf("control API started: %s", server.Addr())
 	s.mu.Lock()
 	s.control = server
 	s.state = StateFile{PID: os.Getpid(), ControlAddr: server.Addr(), AdminToken: s.adminTok, StartedAt: time.Now().UTC()}
@@ -164,12 +166,14 @@ func (s *Service) Start(ctx context.Context) error {
 		_ = s.Shutdown()
 		return fmt.Errorf("start app-server: %w", err)
 	}
+	log.Printf("app-server started")
 	if config.CFTunnel {
 		if err := s.startTunnel(ctx); err != nil {
 			_ = s.Shutdown()
 			return err
 		}
 	}
+	log.Printf("daemon started")
 	return nil
 }
 
@@ -211,6 +215,7 @@ func (s *Service) Shutdown() error {
 			removeErr = nil
 		}
 		s.closeErr = errors.Join(serverErr, s.tunnel.Stop(), s.app.Stop(), removeErr)
+		log.Printf("daemon stopped")
 	})
 	return s.closeErr
 }
@@ -236,9 +241,15 @@ func (s *Service) Overview() Overview {
 	}
 }
 
-func (s *Service) NewPairing() (devices.Pairing, error) { return s.devices.NewPairing() }
-func (s *Service) Devices() []devices.Device            { return s.devices.List() }
-func (s *Service) RevokeDevice(id string) error         { return s.devices.Revoke(id) }
+func (s *Service) NewPairing() (devices.Pairing, error) {
+	pairing, err := s.devices.NewPairing()
+	if err == nil {
+		log.Printf("new device pairing created: expires_at=%s", pairing.ExpiresAt.Format(time.RFC3339))
+	}
+	return pairing, err
+}
+func (s *Service) Devices() []devices.Device    { return s.devices.List() }
+func (s *Service) RevokeDevice(id string) error { return s.devices.Revoke(id) }
 
 func (s *Service) RestartAppServer() error {
 	if err := s.app.Stop(); err != nil {
@@ -255,6 +266,9 @@ func (s *Service) RestartAppServer() error {
 		return errors.New("codex CLI is not installed")
 	}
 	_, err := s.app.Start(context.Background(), executable)
+	if err == nil {
+		log.Printf("app-server started")
+	}
 	return err
 }
 
@@ -278,6 +292,7 @@ func (s *Service) startTunnel(ctx context.Context) error {
 	server := s.control
 	s.mu.RUnlock()
 	if config.CFTunnelMode == "external" {
+		log.Printf("CF tunnel started: %s", config.CFTunnelURL)
 		return nil
 	}
 	if server == nil {
@@ -293,6 +308,9 @@ func (s *Service) startTunnel(ctx context.Context) error {
 	startCtx, cancel := context.WithTimeout(ctx, 25*time.Second)
 	defer cancel()
 	_, err := s.tunnel.Start(startCtx, executable, server.Addr())
+	if err == nil {
+		log.Printf("CF tunnel started: %s", s.tunnel.State().URL)
+	}
 	return err
 }
 

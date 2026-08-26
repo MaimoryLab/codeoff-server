@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -103,6 +104,7 @@ func NewWithOptions[T any](status func(context.Context) T, deviceStore *devices.
 			http.Error(w, "pairing denied", http.StatusUnauthorized)
 			return
 		}
+		log.Printf("device paired: id=%s name=%q", device.ID, device.Name)
 		writeJSON(w, struct {
 			Device devices.Device `json:"device"`
 			Server devices.Server `json:"server"`
