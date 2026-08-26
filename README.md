@@ -1,36 +1,44 @@
-# Codeoff Server
+<p align="center">
+  <img src="build/appicon.png" alt="Codeoff Server logo" width="128">
+</p>
 
-Codeoff Server is a local-first desktop bridge for controlling Codex from a phone. The Wails 3 desktop process owns the local HTTP API, environment checks, Codex process, and Cloudflare Tunnel.
+<h1 align="center">Codeoff Server</h1>
 
-## Requirements
+<p align="center">
+  <a href="https://github.com/MaimoryLab/codeoff-server/actions/workflows/ci-test.yml"><img src="https://github.com/MaimoryLab/codeoff-server/actions/workflows/ci-test.yml/badge.svg" alt="Go CI"></a>
+  <a href="https://github.com/MaimoryLab/codeoff-server/actions/workflows/build-artifacts.yml"><img src="https://github.com/MaimoryLab/codeoff-server/actions/workflows/build-artifacts.yml/badge.svg" alt="Build artifacts"></a>
+  <a href="README.zh-CN.md">中文</a>
+</p>
 
-- Go 1.24+
-- Node.js and pnpm for the frontend
-- Wails 3 CLI pinned to `v3.0.0-beta.13`
+Codeoff Server is a local-first desktop bridge for controlling Codex from a phone. The Wails 3 application owns the local control API, environment checks, Codex app-server process, and Cloudflare Tunnel. Pair it with [Codeoff Mobile](https://github.com/MaimoryLab/codeoff) to work from a mobile device.
 
-Install the pinned CLI once:
+## Quickstart
+
+### Requirements
+
+- Go `1.27+`
+- Node.js and pnpm
+- Wails 3 CLI `v3.0.0-beta.13`
+- Installed `codex` and `cloudflared` binaries (the desktop panel can install supported dependencies after an explicit action)
+
+Install the pinned Wails CLI once:
 
 ```sh
 go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.13
 ```
 
-## Development
+### Run the desktop app
 
 ```sh
 pnpm --dir frontend install
 wails3 dev
 ```
 
-The current desktop panel checks `node`, `codex`, `codex app-server`, and `cloudflared`. It can install Node.js through the available platform package manager (Homebrew, winget, or apt), Codex through npm, and Cloudflared through Homebrew or winget after an explicit button click. The local control API binds to an ephemeral port on all IPv4 interfaces; startup logs print the port for LAN clients, and the API exposes:
+In the desktop panel, start the Codex app-server and Cloudflare Tunnel. Copy the displayed Tunnel URL and one-time pairing code into Codeoff Mobile.
 
-```text
-POST /api/v1/pair/exchange
-GET /api/v1/ws
-```
+The local control API exposes `POST /api/v1/pair/exchange` for pairing and `GET /api/v1/ws` for authenticated WebSocket sessions. Mobile requests and server events share that WebSocket connection.
 
-Pair exchange is the only mobile pairing HTTP API. All mobile authenticated requests and server events share the `/api/v1/ws` WebSocket session and use request IDs for responses. The WebSocket handshake requires a device `Bearer` token. The CLI daemon also exposes token-protected local admin endpoints for lifecycle operations.
-
-## Build
+### Build
 
 ```sh
 wails3 build
@@ -38,11 +46,9 @@ wails3 build
 
 The generated binary is written to `bin/codeoff-server`.
 
-## CLI daemon
+### Run the CLI daemon (optional)
 
-The Wails-free version is split into `codeoff-daemon` and `codeoff-cli`. The
-daemon uses the already-installed `codex` and `cloudflared` binaries and does
-not install or upgrade anything.
+The Wails-free daemon uses already-installed `codex` and `cloudflared` binaries:
 
 ```sh
 go build -o bin/codeoff-daemon ./cmd/codeoff-daemon
@@ -50,10 +56,7 @@ go build -o bin/codeoff-cli ./cmd/codeoff-cli
 bin/codeoff-daemon --listen 0.0.0.0:11037 --cf-tunnel --cf-tunnel-mode quick
 ```
 
-Use `--cf-tunnel-mode external --cf-tunnel-url https://example.com` when a
-Cloudflare application already publishes the control endpoint. The daemon
-writes its local management address and token to its state file; the CLI reads
-that file by default.
+Then inspect or control it with:
 
 ```sh
 bin/codeoff-cli status
@@ -63,4 +66,20 @@ bin/codeoff-cli restart appserver
 bin/codeoff-cli restart tunnel
 ```
 
-The state file can be overridden on both commands with `--state PATH`.
+Use `--cf-tunnel-mode external --cf-tunnel-url https://example.com` for an existing Cloudflare application tunnel. Override the daemon state file with `--state PATH`.
+
+## Development checks
+
+```sh
+go vet ./...
+go test -race ./...
+staticcheck ./...
+```
+
+## Related project
+
+- [Codeoff Mobile](https://github.com/MaimoryLab/codeoff): Flutter client for the desktop bridge.
+
+## License
+
+[Apache License 2.0](LICENSE)
