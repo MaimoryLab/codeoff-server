@@ -103,6 +103,7 @@ jobs:
           wails3 update build-assets
           -name codeoff-server
           -binaryname codeoff-server
+          -productname "Codeoff Server"
           -config build/config.yml
           -dir build
           -productversion ${{ needs.prepare.outputs.version }}
@@ -113,7 +114,7 @@ jobs:
       - name: Sign and notarize macOS app
         run: >-
           wails3 tool sign
-          --input bin/codeoff-server.app
+          --input "bin/Codeoff Server.app"
           --identity "$MACOS_SIGNING_IDENTITY"
           --notarize
           --keychain-profile codeoff-notary
@@ -127,13 +128,13 @@ jobs:
       - name: Sign and notarize macOS DMG
         run: >-
           wails3 tool sign
-          --input bin/codeoff-server.dmg
+          --input "bin/Codeoff Server.dmg"
           --identity "$MACOS_SIGNING_IDENTITY"
           --notarize
           --keychain-profile codeoff-notary
 
       - name: Name macOS artifact
-        run: mv bin/codeoff-server.dmg bin/codeoff-server-darwin-${{ matrix.arch.goarch }}.dmg
+        run: mv "bin/Codeoff Server.dmg" bin/codeoff-server-darwin-${{ matrix.arch.goarch }}.dmg
 
       - name: Upload macOS DMG
         uses: actions/upload-artifact@v7
@@ -182,6 +183,7 @@ jobs:
           wails3 update build-assets
           -name codeoff-server
           -binaryname codeoff-server
+          -productname "Codeoff Server"
           -config build/config.yml
           -dir build
           -productversion ${{ needs.prepare.outputs.version }}
