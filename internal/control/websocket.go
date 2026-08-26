@@ -13,6 +13,13 @@ import (
 	"github.com/coder/websocket"
 )
 
+const (
+	serverVersion       = "0.1.0"
+	minClientVersion    = "1.0.0"
+	serverVersionHeader = "X-Codex-Server-Version"
+	minClientHeader     = "X-Codex-Min-Client-Version"
+)
+
 type websocketRequest struct {
 	ID     int64           `json:"id"`
 	Method string          `json:"method"`
@@ -47,6 +54,8 @@ func websocketHandler(server *Server, store *devices.Store, appServer AppServer,
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
+		w.Header().Set(serverVersionHeader, serverVersion)
+		w.Header().Set(minClientHeader, minClientVersion)
 		conn, err := websocket.Accept(w, r, nil)
 		if err != nil {
 			return

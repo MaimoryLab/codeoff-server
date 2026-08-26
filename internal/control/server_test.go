@@ -89,11 +89,17 @@ func TestPairExchangeAndWebSocketStatus(t *testing.T) {
 	}
 	wsURL.Scheme = "ws"
 	wsURL.Path = "/api/v1/ws"
-	conn, _, err := websocket.Dial(context.Background(), wsURL.String(), &websocket.DialOptions{
+	conn, response, err := websocket.Dial(context.Background(), wsURL.String(), &websocket.DialOptions{
 		HTTPHeader: http.Header{"Authorization": []string{"Bearer " + exchange.Token}},
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if response.Header.Get(serverVersionHeader) != serverVersion {
+		t.Fatalf("server version = %q", response.Header.Get(serverVersionHeader))
+	}
+	if response.Header.Get(minClientHeader) != minClientVersion {
+		t.Fatalf("minimum client version = %q", response.Header.Get(minClientHeader))
 	}
 	t.Cleanup(func() { _ = conn.Close(websocket.StatusNormalClosure, "") })
 	if err := wsjson.Write(context.Background(), conn, map[string]any{
