@@ -51,3 +51,14 @@ tasks:
     summary: Runs the application in server mode
     cmds:
       - task: common:run:server
+
+  build:cli:
+    summary: Builds the daemon and CLI binaries
+    cmds:
+      - go build -o "{{.BIN_DIR}}/codeoff-daemon" ./cmd/codeoff-daemon
+      - go build -o "{{.BIN_DIR}}/codeoff-cli" ./cmd/codeoff-cli
+
+  run:daemon:
+    summary: Runs the CLI daemon
+    cmds:
+      - go run ./cmd/codeoff-daemon {{.CLI_ARGS}}

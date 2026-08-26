@@ -37,3 +37,30 @@ wails3 build
 ```
 
 The generated binary is written to `bin/codeoff-server`.
+
+## CLI daemon
+
+The Wails-free version is split into `codeoff-daemon` and `codeoff-cli`. The
+daemon uses the already-installed `codex` and `cloudflared` binaries and does
+not install or upgrade anything.
+
+```sh
+go build -o bin/codeoff-daemon ./cmd/codeoff-daemon
+go build -o bin/codeoff-cli ./cmd/codeoff-cli
+bin/codeoff-daemon --listen 0.0.0.0:11037 --cf-tunnel --cf-tunnel-mode quick
+```
+
+Use `--cf-tunnel-mode external --cf-tunnel-url https://example.com` when a
+Cloudflare application already publishes the control endpoint. The daemon
+writes its local management address and token to its state file; the CLI reads
+that file by default.
+
+```sh
+bin/codeoff-cli status
+bin/codeoff-cli pair
+bin/codeoff-cli devices
+bin/codeoff-cli restart appserver
+bin/codeoff-cli restart tunnel
+```
+
+The state file can be overridden on both commands with `--state PATH`.
