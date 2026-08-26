@@ -28,7 +28,7 @@ POST /api/v1/pair/exchange
 GET /api/v1/ws
 ```
 
-Pair exchange is the only HTTP API. All authenticated requests and server events share the `/api/v1/ws` WebSocket session and use request IDs for responses. The WebSocket handshake requires a device `Bearer` token.
+Pair exchange is the only mobile pairing HTTP API. All mobile authenticated requests and server events share the `/api/v1/ws` WebSocket session and use request IDs for responses. The WebSocket handshake requires a device `Bearer` token. The CLI daemon also exposes token-protected local admin endpoints for lifecycle operations.
 
 ## Build
 
