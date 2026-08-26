@@ -14,10 +14,10 @@ import (
 )
 
 const (
-	serverVersion       = "0.1.0"
+	serverVersion       = "1.0.0"
 	minClientVersion    = "1.0.0"
-	serverVersionHeader = "X-Codex-Server-Version"
-	minClientHeader     = "X-Codex-Min-Client-Version"
+	serverVersionHeader = "X-Codeoff-Server-Version"
+	minClientHeader     = "X-Codeoff-Min-Client-Version"
 )
 
 type websocketRequest struct {

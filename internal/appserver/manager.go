@@ -81,9 +81,9 @@ func (m *Manager) startLocked(ctx context.Context, executable string) (State, er
 	initializeCtx, initializeCancel := context.WithTimeout(ctx, 10*time.Second)
 	defer initializeCancel()
 	initialized, err := client.Initialize(initializeCtx, ClientInfo{
-		Name:    "codex_remote",
+		Name:    "codeoff_server",
 		Title:   "Codeoff Server",
-		Version: "0.1.0",
+		Version: "1.0.0",
 	})
 	if err != nil {
 		cancel()
