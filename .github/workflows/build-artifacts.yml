@@ -55,7 +55,6 @@ jobs:
       CGO_ENABLED: 1
       CGO_CFLAGS: -mmacosx-version-min=13.0
       CGO_LDFLAGS: -mmacosx-version-min=13.0
-      GOARCH: ${{ matrix.arch.goarch }}
       MACOSX_DEPLOYMENT_TARGET: '13.0'
       MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
 
@@ -158,7 +157,6 @@ jobs:
 
     env:
       CGO_ENABLED: 0
-      GOARCH: ${{ matrix.arch.goarch }}
 
     steps:
       - uses: actions/checkout@v7
@@ -220,7 +218,6 @@ jobs:
       CGO_ENABLED: 1
       GIT_COMMITTER_EMAIL: support@maimory.ai
       GIT_COMMITTER_NAME: MaimoryLab
-      GOARCH: ${{ matrix.arch.goarch }}
 
     steps:
       - uses: actions/checkout@v7
