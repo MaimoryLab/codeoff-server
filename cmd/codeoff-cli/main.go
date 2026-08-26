@@ -69,7 +69,7 @@ type pairing struct {
 func main() {
 	statePath := flag.String("state", "", "daemon state file")
 	flag.BoolVar(&jsonOutput, "json", false, "print machine-readable JSON")
-	flag.StringVar(&qrDir, "qr-dir", ".", "directory for generated QR code PNG files")
+	flag.StringVar(&qrDir, "qr-dir", "", "directory for QR PNG files (default: render in terminal)")
 	flag.BoolVar(&qrTerminal, "qr-terminal", false, "render the QR code in the terminal")
 	flag.Usage = usage
 	flag.Parse()
@@ -193,7 +193,7 @@ func printPair(c *client) {
 		"tunnelAddress":   status.Tunnel.URL,
 	}
 	payload["pairingCode"] = pair.Token
-	qrPath, qrErr := writeQRCode(payload, qrDir)
+	qrPath, qrErr := outputQRCode(payload)
 	if jsonOutput {
 		output := map[string]any{
 			"serverUuid":      status.ServerUUID,
@@ -210,13 +210,13 @@ func printPair(c *client) {
 		return
 	}
 	fmt.Printf("Pairing code: %s\nExpires: %s\n", pair.Token, formatTime(pair.ExpiresAt))
-	if qrTerminal {
+	if qrTerminal || qrDir == "" {
 		fmt.Println("QR code:")
 		printTerminalQRCode(payload)
 	}
 	if qrPath != "" {
 		fmt.Printf("QR code: %s\n", qrPath)
-	} else {
+	} else if qrErr != nil {
 		fmt.Printf("QR code: unavailable (%s)\n", qrErr)
 	}
 }
@@ -232,7 +232,7 @@ func printConnect(c *client) {
 		"listenAddresses": status.ControlAddrs,
 		"tunnelAddress":   status.Tunnel.URL,
 	}
-	qrPath, qrErr := writeQRCode(payload, qrDir)
+	qrPath, qrErr := outputQRCode(payload)
 	if jsonOutput {
 		output := map[string]any{
 			"serverUuid":      status.ServerUUID,
@@ -247,15 +247,22 @@ func printConnect(c *client) {
 		return
 	}
 	fmt.Println("Connection QR code")
-	if qrTerminal {
+	if qrTerminal || qrDir == "" {
 		fmt.Println("QR code:")
 		printTerminalQRCode(payload)
 	}
 	if qrPath != "" {
 		fmt.Printf("QR code: %s\n", qrPath)
-	} else {
+	} else if qrErr != nil {
 		fmt.Printf("QR code: unavailable (%s)\n", qrErr)
 	}
+}
+
+func outputQRCode(payload any) (string, error) {
+	if qrDir == "" {
+		return "", nil
+	}
+	return writeQRCode(payload, qrDir)
 }
 
 func writeQRCode(payload any, dir string) (string, error) {
@@ -386,7 +393,7 @@ Commands:
 Flags:
   --state PATH             Daemon state file
   --json                   Print machine-readable JSON
-  --qr-dir DIR             QR output directory (default: current directory)
+  --qr-dir DIR             QR PNG output directory (default: terminal)
   --qr-terminal             Render QR code in the terminal
 
 Examples:
