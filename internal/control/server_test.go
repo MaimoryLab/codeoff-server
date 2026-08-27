@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -193,6 +194,56 @@ func TestHTTPUpload(t *testing.T) {
 	data, err := os.ReadFile(result.Path)
 	if err != nil || string(data) != "image data" {
 		t.Fatalf("uploaded data = %q, %v", data, err)
+	}
+}
+
+func TestHTTPFileRequiresAuthAndReturnsBody(t *testing.T) {
+	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pairing, err := store.NewPairing()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, token, err := store.Exchange(pairing.Token, "Phone")
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "notes.txt")
+	if err := os.WriteFile(path, []byte("hello"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	server := New(func(context.Context) diagnostics.Snapshot { return diagnostics.Snapshot{} }, store)
+	httpServer := httptest.NewServer(server.httpServer.Handler)
+	t.Cleanup(httpServer.Close)
+
+	request, err := http.NewRequest(http.MethodGet, httpServer.URL+"/api/v1/file?path="+url.QueryEscape(path), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if response.StatusCode != http.StatusUnauthorized {
+		response.Body.Close()
+		t.Fatalf("unauthorized status = %d", response.StatusCode)
+	}
+	response.Body.Close()
+
+	request.Header.Set("Authorization", "Bearer "+token)
+	response, err = http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("file status = %d", response.StatusCode)
+	}
+	body, err := io.ReadAll(response.Body)
+	if err != nil || string(body) != "hello" {
+		t.Fatalf("file body = %q, %v", body, err)
 	}
 }
 

@@ -8,10 +8,12 @@ import (
 	"io"
 	"io/fs"
 	"log"
+	"mime"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -113,6 +115,7 @@ func NewWithOptions[T any](status func(context.Context) T, deviceStore *devices.
 		}{device, deviceStore.Server(), token})
 	})
 	mux.HandleFunc("POST /api/v1/upload", uploadHandler(server, deviceStore))
+	mux.HandleFunc("GET /api/v1/file", fileHandler(deviceStore))
 	mux.HandleFunc("GET /api/v1/ws", websocketHandler(server, deviceStore, appServer, events))
 	if options.Admin != nil && options.AdminToken != "" {
 		server.addAdminRoutes(mux, options.Admin, options.AdminToken)
@@ -213,6 +216,56 @@ func uploadHandler(server *Server, store *devices.Store) http.HandlerFunc {
 	}
 }
 
+func fileHandler(store *devices.Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := authenticateDevice(store, r.Header.Get("Authorization")); !ok {
+			w.Header().Set("WWW-Authenticate", "Bearer")
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		path := strings.TrimSpace(r.URL.Query().Get("path"))
+		if path == "" {
+			http.Error(w, "path is required", http.StatusBadRequest)
+			return
+		}
+		path, err := filepath.Abs(filepath.Clean(path))
+		if err != nil {
+			http.Error(w, "invalid file path", http.StatusBadRequest)
+			return
+		}
+		file, err := os.Open(path)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				http.Error(w, "file not found", http.StatusNotFound)
+			} else {
+				http.Error(w, "unable to open file", http.StatusForbidden)
+			}
+			return
+		}
+		defer file.Close()
+		info, err := file.Stat()
+		if err != nil || !info.Mode().IsRegular() {
+			http.Error(w, "file not found", http.StatusNotFound)
+			return
+		}
+		if info.Size() > maxUploadSize {
+			http.Error(w, "file exceeds 25 MB limit", http.StatusRequestEntityTooLarge)
+			return
+		}
+		header := make([]byte, 512)
+		n, _ := file.Read(header)
+		contentType := http.DetectContentType(header[:n])
+		if _, err := file.Seek(0, io.SeekStart); err != nil {
+			http.Error(w, "unable to read file", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", contentType)
+		w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
+		w.Header().Set("Content-Disposition", mime.FormatMediaType("inline", map[string]string{"filename": filepath.Base(path)}))
+		_, _ = io.Copy(w, io.LimitReader(file, maxUploadSize))
+	}
+}
+
 func (r turnRequest) addPermissions(params map[string]any) error {
 	if r.ApprovalPolicy == "" && r.SandboxPolicy == nil {
 		return nil
@@ -242,6 +295,12 @@ type directoryEntry struct {
 	Path string `json:"path"`
 }
 
+type fileEntry struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+	Size int64  `json:"size"`
+}
+
 func listDirectoriesValue(rawPath string) (map[string]any, error) {
 	path := strings.TrimSpace(rawPath)
 	if path == "" {
@@ -264,18 +323,21 @@ func listDirectoriesValue(rawPath string) (map[string]any, error) {
 		return nil, fmt.Errorf("read directory: %w", err)
 	}
 	directories := make([]directoryEntry, 0, len(entries))
+	files := make([]fileEntry, 0, len(entries))
 	for _, entry := range entries {
 		child := filepath.Join(path, entry.Name())
 		childInfo, err := os.Stat(child)
 		if err == nil && childInfo.IsDir() {
 			directories = append(directories, directoryEntry{Name: entry.Name(), Path: child})
+		} else if err == nil && childInfo.Mode().IsRegular() {
+			files = append(files, fileEntry{Name: entry.Name(), Path: child, Size: childInfo.Size()})
 		}
 	}
 	parent := filepath.Dir(path)
 	if parent == path {
 		parent = ""
 	}
-	return map[string]any{"path": path, "parent": parent, "directories": directories}, nil
+	return map[string]any{"path": path, "parent": parent, "directories": directories, "files": files}, nil
 }
 
 func createDirectoryValue(rawPath, rawName string) (map[string]any, error) {
