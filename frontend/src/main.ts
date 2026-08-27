@@ -423,10 +423,10 @@ function positionCustomDomainHelp() {
     const icon = customDomainHelp.getBoundingClientRect();
     const width = Math.min(200, window.innerWidth - 24);
     const left = Math.max(12, Math.min(icon.left, window.innerWidth - width - 12));
-    customDomainHelp.style.setProperty("--help-left", `${left}px`);
-    customDomainHelpTooltip.style.setProperty("--help-top", "12px");
+    customDomainHelpTooltip.style.left = `${left}px`;
+    customDomainHelpTooltip.style.top = "12px";
     const height = customDomainHelpTooltip.getBoundingClientRect().height;
-    customDomainHelp.style.setProperty("--help-top", `${Math.max(12, icon.top - height - 8)}px`);
+    customDomainHelpTooltip.style.top = `${Math.max(12, icon.top - height - 8)}px`;
 }
 
 function closeCustomDomainHelp() {

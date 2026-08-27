@@ -52,7 +52,7 @@ h2 { margin-bottom: 8px; font-size: 19px; }
 .field-label { display: flex; align-items: center; gap: 6px; }
 .hint-icon { position: relative; display: inline-grid; width: 16px; height: 16px; place-items: center; border: 1px solid #697383; border-radius: 50%; color: #aeb7c4; cursor: help; font-size: 11px; font-weight: 700; }
 .hint-icon:focus-visible { outline: 1px solid #d9dee6; outline-offset: 2px; }
-.hint-tooltip { position: fixed; top: var(--help-top, 12px); left: var(--help-left, 12px); z-index: 2; display: none; width: min(200px, calc(100vw - 24px)); border: 1px solid #3a414e; border-radius: 5px; background: #20242c; box-shadow: 0 8px 24px rgb(0 0 0 / 30%); color: #d9dee6; font-size: 12px; font-weight: 400; line-height: 1.4; overflow-wrap: anywhere; padding: 8px 10px; }
+.hint-tooltip { position: fixed; top: 12px; left: 12px; z-index: 2; display: none; width: min(200px, calc(100vw - 24px)); border: 1px solid #3a414e; border-radius: 5px; background: #20242c; box-shadow: 0 8px 24px rgb(0 0 0 / 30%); color: #d9dee6; font-size: 12px; font-weight: 400; line-height: 1.4; overflow-wrap: anywhere; padding: 8px 10px; }
 .hint-icon:hover .hint-tooltip, .hint-icon:focus .hint-tooltip, .hint-icon.open .hint-tooltip { display: block; }
 .tunnel-settings input { width: 100%; min-height: 34px; border: 1px solid #3a414e; border-radius: 5px; outline: none; background: #101218; color: #e9edf2; padding: 7px 9px; }
 .tunnel-settings input:focus { border-color: #7d8796; }
