@@ -256,13 +256,7 @@ func listDirectoriesValue(rawPath string) (map[string]any, error) {
 		return nil, errors.New("invalid directory path")
 	}
 	info, err := os.Stat(path)
-	if err != nil {
-		if errors.Is(err, fs.ErrPermission) {
-			return nil, fmt.Errorf("access directory: %w", err)
-		}
-		return nil, errors.New("directory not found")
-	}
-	if !info.IsDir() {
+	if err != nil || !info.IsDir() {
 		return nil, errors.New("directory not found")
 	}
 	entries, err := os.ReadDir(path)
