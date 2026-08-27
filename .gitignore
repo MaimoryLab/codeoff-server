@@ -15,3 +15,5 @@ build/android/gen/
 
 .env
 .agents/
+
+ppio.toml

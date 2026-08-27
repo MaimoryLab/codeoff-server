@@ -30,23 +30,32 @@ func main() {
 		log.Fatal(err)
 	}
 	defer func() { _ = service.Shutdown() }()
-	if err := service.startControlServer(); err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("control API listening on %s", service.Overview().ControlAddr)
-	if err := service.restore(); err != nil {
-		log.Printf("restore services: %v", err)
-	}
+
+	var window *application.WebviewWindow
+	windowReady := make(chan struct{})
 
 	app := application.New(application.Options{
 		Name:        "Codeoff Server",
 		Description: "Local Codex remote control",
 		Services:    []application.Service{application.NewService(service)},
+		SingleInstance: &application.SingleInstanceOptions{
+			UniqueID: "com.maimorylab.codeoff.server",
+			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
+				<-windowReady
+				window.Show().Focus()
+			},
+		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: false,
+		},
+		Windows: application.WindowsOptions{
+			DisableQuitOnLastWindowClosed: true,
+		},
+		Linux: application.LinuxOptions{
+			DisableQuitOnLastWindowClosed: true,
 		},
 	})
 	githubProvider, err := github.New(github.Config{
@@ -69,17 +78,27 @@ func main() {
 		}
 	}
 
-	window := app.Window.NewWithOptions(application.WebviewWindowOptions{
+	window = app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:            "Codeoff Server",
 		Width:            900,
 		Height:           600,
 		BackgroundColour: application.NewRGB(16, 18, 24),
 		URL:              "/",
 	})
-	window.OnWindowEvent(events.Common.WindowClosing, func(event *application.WindowEvent) {
+	closeWindowHook := window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
 		event.Cancel()
 		window.Hide()
 	})
+	defer closeWindowHook()
+	close(windowReady)
+
+	if err := service.startControlServer(); err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("control API listening on %s", service.Overview().ControlAddr)
+	if err := service.restore(); err != nil {
+		log.Printf("restore services: %v", err)
+	}
 
 	menu := app.NewMenu()
 	var updateTrayMenu func()

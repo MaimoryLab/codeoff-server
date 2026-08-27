@@ -1,0 +1,13 @@
+.task
+bin
+frontend
+build
+
+.DS_Store
+
+.env
+.agents
+.github
+.codegraph
+
+Dockerfile

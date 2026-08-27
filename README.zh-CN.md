@@ -48,13 +48,13 @@ Release 安装包对应桌面应用。无 Wails 界面的部署方式需要按�
 
 - Go `1.27+`
 - Node.js 和 pnpm
-- Wails 3 CLI `v3.0.0-beta.13`
+- Wails 3 CLI `v3.0.0-beta.14`
 - 已安装的 `codex` 和 `cloudflared` 可执行文件（桌面面板支持在用户明确点击后安装部分依赖）
 
 先安装固定版本的 Wails CLI：
 
 ```sh
-go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.13
+go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.14
 ```
 
 #### 运行桌面应用
