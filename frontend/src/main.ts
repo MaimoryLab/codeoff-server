@@ -515,7 +515,7 @@ customDomainHelp.addEventListener("keydown", (event) => {
     event.preventDefault();
     customDomainHelp.click();
 });
-customDomainHelp.addEventListener("pointerenter", positionCustomDomainHelp);
+customDomainHelp.addEventListener("pointerenter", () => window.requestAnimationFrame(positionCustomDomainHelp));
 document.addEventListener("pointermove", (event) => {
     if (!customDomainHelp.classList.contains("open")) return;
     const icon = customDomainHelp.getBoundingClientRect();
