@@ -298,7 +298,7 @@ func printStatus(raw json.RawMessage) {
 	}
 	fmt.Printf("Server UUID: %s\nControl API: %s\nConnected clients: %d\n", status.ServerUUID, status.ControlAddr, status.ConnectedClients)
 	fmt.Printf("App-server: %s\n", stateLabel(status.AppServer.Running, status.AppServer.Starting, status.AppServer.Stopping, status.AppServer.Error))
-	fmt.Printf("CF Tunnel: %s", stateLabel(status.Tunnel.Running, status.Tunnel.Starting, status.Tunnel.Stopping, status.Tunnel.Error))
+	fmt.Printf("Tunnel: %s", stateLabel(status.Tunnel.Running, status.Tunnel.Starting, status.Tunnel.Stopping, status.Tunnel.Error))
 	if status.Tunnel.URL != "" {
 		fmt.Printf(" (%s)", status.Tunnel.URL)
 	}

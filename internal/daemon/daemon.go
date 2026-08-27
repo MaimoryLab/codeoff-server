@@ -82,6 +82,31 @@ func DefaultStatePath() (string, error) {
 	return filepath.Join(directory, "codex-remote", "daemon.json"), nil
 }
 
+func DefaultSettingsPath() (string, error) {
+	directory, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(directory, "codex-remote", "settings.json"), nil
+}
+
+func LoadTunnelURL(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	var settings struct {
+		TunnelURL string `json:"tunnelUrl"`
+	}
+	if err := json.Unmarshal(data, &settings); err != nil {
+		return "", fmt.Errorf("read settings: %w", err)
+	}
+	return settings.TunnelURL, nil
+}
+
 func New(config Config) (*Service, error) {
 	if config.ListenAddr == "" {
 		config.ListenAddr = DefaultListenAddr

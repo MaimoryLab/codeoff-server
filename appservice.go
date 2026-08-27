@@ -19,6 +19,7 @@ import (
 	"github.com/MaimoryLab/codeoff-server/internal/appserver"
 	"github.com/MaimoryLab/codeoff-server/internal/awake"
 	"github.com/MaimoryLab/codeoff-server/internal/control"
+	"github.com/MaimoryLab/codeoff-server/internal/daemon"
 	"github.com/MaimoryLab/codeoff-server/internal/devices"
 	"github.com/MaimoryLab/codeoff-server/internal/diagnostics"
 	"github.com/MaimoryLab/codeoff-server/internal/installer"
@@ -72,7 +73,10 @@ func NewAppService() (*AppService, error) {
 	if err != nil {
 		return nil, err
 	}
-	settingsPath := filepath.Join(filepath.Dir(devicePath), "settings.json")
+	settingsPath, err := daemon.DefaultSettingsPath()
+	if err != nil {
+		return nil, err
+	}
 	loadedSettings, err := loadSettings(settingsPath)
 	if err != nil {
 		return nil, err

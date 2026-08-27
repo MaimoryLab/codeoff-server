@@ -22,6 +22,19 @@ func main() {
 	flag.StringVar(&config.CodexPath, "codex", "", "codex executable path (default: PATH)")
 	flag.StringVar(&config.CloudflaredPath, "cloudflared", "", "cloudflared executable path (default: PATH)")
 	flag.Parse()
+	if !flagWasSet("cf-tunnel") && !flagWasSet("cf-tunnel-mode") && !flagWasSet("cf-tunnel-url") {
+		settingsPath, settingsErr := daemon.DefaultSettingsPath()
+		if settingsErr != nil {
+			log.Fatal(settingsErr)
+		}
+		configuredURL, loadErr := daemon.LoadTunnelURL(settingsPath)
+		if loadErr != nil {
+			log.Fatal(loadErr)
+		}
+		if configuredURL != "" {
+			config.CFTunnel, config.CFTunnelMode, config.CFTunnelURL = true, "external", configuredURL
+		}
+	}
 
 	service, err := daemon.New(config)
 	if err != nil {
@@ -34,4 +47,14 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+func flagWasSet(name string) bool {
+	set := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			set = true
+		}
+	})
+	return set
 }

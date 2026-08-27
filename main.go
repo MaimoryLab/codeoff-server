@@ -130,9 +130,9 @@ func main() {
 		appServerStatus.SetLabel("App-server：" + serviceStatus(overview.Environment.AppServer.Installed, overview.AppServer.Running, overview.AppServer.Starting, overview.AppServer.Stopping))
 		appServerAddress.SetLabel(overview.ControlAddr).SetHidden(!overview.AppServer.Running)
 		appServerToggle.SetLabel(toggleLabel(overview.AppServer.Running || overview.AppServer.Starting)).SetEnabled(overview.Environment.AppServer.Installed && !overview.AppServer.Starting && !overview.AppServer.Stopping)
-		tunnelStatus.SetLabel("CF Tunnel：" + serviceStatus(overview.Environment.Cloudflared.Installed, overview.Tunnel.Running, overview.Tunnel.Starting, overview.Tunnel.Stopping))
+		tunnelStatus.SetLabel("Tunnel：" + serviceStatus(overview.Environment.Cloudflared.Installed || overview.Tunnel.External, overview.Tunnel.Running, overview.Tunnel.Starting, overview.Tunnel.Stopping))
 		tunnelAddress.SetLabel(overview.Tunnel.URL).SetHidden(!overview.Tunnel.Running)
-		tunnelToggle.SetLabel(toggleLabel(overview.Tunnel.Running || overview.Tunnel.Starting)).SetEnabled(overview.Environment.Cloudflared.Installed && !overview.Tunnel.Starting && !overview.Tunnel.Stopping)
+		tunnelToggle.SetLabel(toggleLabel(overview.Tunnel.Running || overview.Tunnel.Starting)).SetHidden(overview.Tunnel.External).SetEnabled(overview.Environment.Cloudflared.Installed && !overview.Tunnel.External && !overview.Tunnel.Starting && !overview.Tunnel.Stopping)
 		preventSleep.SetChecked(service.preventSleepEnabled())
 	}
 	updateTrayMenu()

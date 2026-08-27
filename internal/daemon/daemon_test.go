@@ -36,3 +36,17 @@ func TestLoadState(t *testing.T) {
 		t.Fatalf("state = %#v, err = %v", state, err)
 	}
 }
+
+func TestLoadTunnelURL(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "settings.json")
+	if got, err := LoadTunnelURL(path); err != nil || got != "" {
+		t.Fatalf("missing tunnel URL = %q, %v", got, err)
+	}
+	if err := os.WriteFile(path, []byte(`{"tunnelUrl":"https://remote.example.com"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := LoadTunnelURL(path)
+	if err != nil || got != "https://remote.example.com" {
+		t.Fatalf("tunnel URL = %q, %v", got, err)
+	}
+}
