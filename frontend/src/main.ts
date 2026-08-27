@@ -70,6 +70,7 @@ const tunnelModeQuickButton = document.querySelector<HTMLButtonElement>("#tunnel
 const tunnelModeExternalButton = document.querySelector<HTMLButtonElement>("#tunnel-mode-external")!;
 const tunnelURLField = document.querySelector<HTMLElement>("#tunnel-url-field")!;
 const tunnelURLInput = document.querySelector<HTMLInputElement>("#tunnel-url")!;
+const customDomainHelp = document.querySelector<HTMLElement>("#custom-domain-help")!;
 const copyTunnelButton = document.querySelector<HTMLButtonElement>("#copy-tunnel")!;
 const toggleTunnelButton = document.querySelector<HTMLButtonElement>("#toggle-tunnel")!;
 const bindDeviceButton = document.querySelector<HTMLButtonElement>("#bind-device")!;
@@ -488,6 +489,15 @@ tunnelURLInput.addEventListener("input", () => {
     tunnelConfigVersion++;
 });
 tunnelURLInput.addEventListener("blur", () => { window.setTimeout(() => void saveTunnelConfig(), 0); });
+customDomainHelp.addEventListener("click", () => {
+    const expanded = customDomainHelp.classList.toggle("open");
+    customDomainHelp.setAttribute("aria-expanded", `${expanded}`);
+});
+customDomainHelp.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    customDomainHelp.click();
+});
 bindDeviceButton.addEventListener("click", () => void bindDevice());
 copyPairingButton.addEventListener("click", () => void copyPairingCode());
 copyPairingListenButton.addEventListener("click", () => void copyText(controlAddrs.join("\n"), t("listenAddress")));
