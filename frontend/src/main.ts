@@ -71,6 +71,7 @@ const tunnelModeExternalButton = document.querySelector<HTMLButtonElement>("#tun
 const tunnelURLField = document.querySelector<HTMLElement>("#tunnel-url-field")!;
 const tunnelURLInput = document.querySelector<HTMLInputElement>("#tunnel-url")!;
 const customDomainHelp = document.querySelector<HTMLElement>("#custom-domain-help")!;
+const customDomainHelpTooltip = customDomainHelp.querySelector<HTMLElement>(".hint-tooltip")!;
 const copyTunnelButton = document.querySelector<HTMLButtonElement>("#copy-tunnel")!;
 const toggleTunnelButton = document.querySelector<HTMLButtonElement>("#toggle-tunnel")!;
 const bindDeviceButton = document.querySelector<HTMLButtonElement>("#bind-device")!;
@@ -418,6 +419,21 @@ async function copyText(value: string, label: string) {
     }
 }
 
+function positionCustomDomainHelp() {
+    const icon = customDomainHelp.getBoundingClientRect();
+    const width = Math.min(200, window.innerWidth - 24);
+    const left = Math.max(12, Math.min(icon.left, window.innerWidth - width - 12));
+    customDomainHelp.style.setProperty("--help-left", `${left}px`);
+    customDomainHelpTooltip.style.setProperty("--help-top", "12px");
+    const height = customDomainHelpTooltip.getBoundingClientRect().height;
+    customDomainHelp.style.setProperty("--help-top", `${Math.max(12, icon.top - height - 8)}px`);
+}
+
+function closeCustomDomainHelp() {
+    customDomainHelp.classList.remove("open");
+    customDomainHelp.setAttribute("aria-expanded", "false");
+}
+
 function renderListenAddr(address: string) {
     const separator = address.lastIndexOf(":");
     if (separator < 0) return;
@@ -492,11 +508,24 @@ tunnelURLInput.addEventListener("blur", () => { window.setTimeout(() => void sav
 customDomainHelp.addEventListener("click", () => {
     const expanded = customDomainHelp.classList.toggle("open");
     customDomainHelp.setAttribute("aria-expanded", `${expanded}`);
+    if (expanded) window.requestAnimationFrame(positionCustomDomainHelp);
 });
 customDomainHelp.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
     customDomainHelp.click();
+});
+customDomainHelp.addEventListener("pointerenter", positionCustomDomainHelp);
+document.addEventListener("pointermove", (event) => {
+    if (!customDomainHelp.classList.contains("open")) return;
+    const icon = customDomainHelp.getBoundingClientRect();
+    const tooltip = customDomainHelpTooltip.getBoundingClientRect();
+    const inIcon = event.clientX >= icon.left && event.clientX <= icon.right && event.clientY >= icon.top && event.clientY <= icon.bottom;
+    const inTooltip = event.clientX >= tooltip.left && event.clientX <= tooltip.right && event.clientY >= tooltip.top && event.clientY <= tooltip.bottom;
+    if (!inIcon && !inTooltip) closeCustomDomainHelp();
+});
+window.addEventListener("resize", () => {
+    if (customDomainHelp.classList.contains("open")) positionCustomDomainHelp();
 });
 bindDeviceButton.addEventListener("click", () => void bindDevice());
 copyPairingButton.addEventListener("click", () => void copyPairingCode());
