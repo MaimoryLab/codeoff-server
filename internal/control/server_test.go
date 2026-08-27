@@ -3,6 +3,7 @@ package control
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -22,6 +23,27 @@ import (
 
 type fakeRemoteAppServer struct {
 	events chan appserver.Event
+}
+
+func TestCreateDirectoryValue(t *testing.T) {
+	parent := t.TempDir()
+	result, err := createDirectoryValue(parent, "project")
+	if err != nil {
+		t.Fatal(err)
+	}
+	created := filepath.Join(parent, "project")
+	if result["path"] != created {
+		t.Fatalf("created path = %#v, want %q", result["path"], created)
+	}
+	if info, err := os.Stat(created); err != nil || !info.IsDir() {
+		t.Fatalf("created directory: %v", err)
+	}
+	if _, err := createDirectoryValue(parent, "project"); !errors.Is(err, os.ErrExist) {
+		t.Fatalf("duplicate error = %v", err)
+	}
+	if _, err := createDirectoryValue(parent, "../escape"); err == nil {
+		t.Fatal("path traversal name was accepted")
+	}
 }
 
 func (s *fakeRemoteAppServer) Call(context.Context, string, any) (json.RawMessage, error) {

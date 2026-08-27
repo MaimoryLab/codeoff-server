@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"log"
 	"net/http"
 	"strings"
@@ -163,6 +164,26 @@ func (s *websocketSession) dispatch(request websocketRequest) (any, int, error) 
 		path, _ := params["path"].(string)
 		result, err := listDirectoriesValue(path)
 		return result, statusFor(err, http.StatusBadRequest), err
+	case "directory/create":
+		path, err := requiredString(params, "path")
+		if err != nil {
+			return nil, http.StatusBadRequest, err
+		}
+		name, err := requiredString(params, "name")
+		if err != nil {
+			return nil, http.StatusBadRequest, err
+		}
+		result, err := createDirectoryValue(path, name)
+		if err != nil {
+			status := http.StatusBadRequest
+			if errors.Is(err, fs.ErrExist) {
+				status = http.StatusConflict
+			} else if errors.Is(err, fs.ErrPermission) {
+				status = http.StatusForbidden
+			}
+			return nil, status, err
+		}
+		return result, http.StatusOK, nil
 	case "thread/list":
 		return s.call("thread/list", params)
 	case "thread/read":

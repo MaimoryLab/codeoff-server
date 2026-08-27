@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -255,7 +256,13 @@ func listDirectoriesValue(rawPath string) (map[string]any, error) {
 		return nil, errors.New("invalid directory path")
 	}
 	info, err := os.Stat(path)
-	if err != nil || !info.IsDir() {
+	if err != nil {
+		if errors.Is(err, fs.ErrPermission) {
+			return nil, fmt.Errorf("access directory: %w", err)
+		}
+		return nil, errors.New("directory not found")
+	}
+	if !info.IsDir() {
 		return nil, errors.New("directory not found")
 	}
 	entries, err := os.ReadDir(path)
@@ -275,6 +282,39 @@ func listDirectoriesValue(rawPath string) (map[string]any, error) {
 		parent = ""
 	}
 	return map[string]any{"path": path, "parent": parent, "directories": directories}, nil
+}
+
+func createDirectoryValue(rawPath, rawName string) (map[string]any, error) {
+	path := strings.TrimSpace(rawPath)
+	if path == "" {
+		return nil, errors.New("path is required")
+	}
+	path, err := filepath.Abs(filepath.Clean(path))
+	if err != nil {
+		return nil, errors.New("invalid directory path")
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		if errors.Is(err, fs.ErrPermission) {
+			return nil, fmt.Errorf("access directory: %w", err)
+		}
+		return nil, errors.New("directory not found")
+	}
+	if !info.IsDir() {
+		return nil, errors.New("directory not found")
+	}
+	name := strings.TrimSpace(rawName)
+	if name == "" {
+		return nil, errors.New("name is required")
+	}
+	if name == "." || name == ".." || filepath.Base(name) != name || strings.ContainsAny(name, `/\\`) {
+		return nil, errors.New("invalid directory name")
+	}
+	created := filepath.Join(path, name)
+	if err := os.Mkdir(created, 0o755); err != nil {
+		return nil, fmt.Errorf("create directory: %w", err)
+	}
+	return map[string]any{"name": name, "path": created}, nil
 }
 
 func (s *Server) saveUpload(name string, data io.Reader) (map[string]any, error) {
