@@ -9,11 +9,13 @@ const translations: Record<Language, Record<string, string>> = {
     en: {
         localControl: "LOCAL CONTROL", connect: "Connect", refresh: "Refresh", copy: "Copy",
         runtime: "RUNTIME", appServer: "Codex app-server", remoteAccess: "REMOTE ACCESS", tunnel: "Tunnel", devices: "DEVICES", boundDevices: "Bound devices", bindDevice: "Bind new device", noDevices: "No devices bound", environment: "ENVIRONMENT", environmentStatus: "Environment status", localTools: "Local tools", checking: "Checking", install: "Install", saveRestart: "Save & restart", listenAddress: "Listen address", port: "Port",
+        configure: "Configure", cancel: "Cancel", codexEnvironment: "Codex environment", environmentVariables: "Environment variables", codexEnvironmentSaved: "Codex environment saved", unableLoadCodexEnvironment: "Unable to load Codex environment", unableSaveCodexEnvironment: "Unable to save Codex environment",
         installed: "Installed", notInstalled: "Not installed", upgrade: "Upgrade", start: "Start", stop: "Stop", close: "Close", save: "Save", checked: "Checked {value}", starting: "Starting", stopping: "Stopping", running: "Running", offline: "Offline", stopped: "Stopped", configured: "Configured", online: "Online", localControlEndpoint: "Local control endpoint", remoteAccessEnabled: "Remote access enabled", externalTunnelConfigured: "Using configured custom domain", customDomain: "Custom domain", customDomainURL: "Custom domain address", customDomainHelp: "How to configure: listen on the local bound address yourself, forward this domain to it, and manage that service's status.", installCloudflared: "Install Cloudflared to enable remote access", installCloudflaredFirst: "Install Cloudflared first", expires: "Expires {value}", pairDevice: "Pair device", connectDevice: "Connect device", pairingCode: "Pairing code", tunnelAddress: "Tunnel address", tunnelMode: "Tunnel mode", quickTunnel: "Quick Tunnel (recommended)", existingTunnel: "Custom domain", existingTunnelURL: "Custom domain address", saveTunnel: "Save tunnel settings", tunnelSettingsSaved: "Tunnel settings saved", connected: "Connected", revoke: "Revoke", copied: "{label} copied", unableToCopy: "Unable to copy {label}", connectionChecking: "Checking local environment...", unableToCheck: "Unable to check environment", startingTunnel: "Starting tunnel...", stoppingTunnel: "Stopping tunnel...", tunnelOnline: "Tunnel is online", tunnelStopped: "Tunnel stopped", unableChangeTunnel: "Unable to change tunnel state", unableSaveTunnel: "Unable to save tunnel settings", startingAppServer: "Starting app-server...", stoppingAppServer: "Stopping app-server...", appServerRunning: "App-server is running", appServerStopped: "App-server stopped", unableChangeAppServer: "Unable to change app-server state", unableLoadDevices: "Unable to load devices", unableCreatePairing: "Unable to create pairing code", restartingServer: "Restarting local server...", serverRestarted: "Local server restarted", unableUpdateListen: "Unable to update listen address", unableRevoke: "Unable to revoke device", installing: "Installing {label}...", upgrading: "Upgrading {label}...", installationFailed: "Installation failed"
     },
     zh: {
         localControl: "本地控制", connect: "连接", refresh: "刷新", copy: "复制",
         runtime: "运行时", appServer: "Codex 应用服务", remoteAccess: "远程访问", tunnel: "隧道", devices: "设备", boundDevices: "已绑定设备", bindDevice: "绑定新设备", noDevices: "暂无绑定设备", environment: "环境", environmentStatus: "环境状态", localTools: "本地工具", checking: "检查中", install: "安装", saveRestart: "保存并重启", listenAddress: "监听地址", port: "端口",
+        configure: "配置", cancel: "取消", codexEnvironment: "Codex 运行环境", environmentVariables: "环境变量", codexEnvironmentSaved: "Codex 环境变量已保存", unableLoadCodexEnvironment: "无法加载 Codex 环境变量", unableSaveCodexEnvironment: "无法保存 Codex 环境变量",
         installed: "已安装", notInstalled: "未安装", upgrade: "升级", start: "启动", stop: "停止", close: "关闭", save: "保存", checked: "检查于 {value}", starting: "启动中", stopping: "停止中", running: "运行中", offline: "离线", stopped: "已停止", configured: "已配置", online: "在线", localControlEndpoint: "本地控制端点", remoteAccessEnabled: "已启用远程访问", externalTunnelConfigured: "使用已配置的自定义域名", customDomain: "自定义域名", customDomainURL: "自定义域名地址", customDomainHelp: "如何配置：请自行监听本地绑定地址，将此域名转发到该地址，并自行管理该服务状态。", installCloudflared: "安装 Cloudflared 以启用远程访问", installCloudflaredFirst: "请先安装 Cloudflared", expires: "过期时间 {value}", pairDevice: "配对设备", connectDevice: "连接设备", pairingCode: "配对码", tunnelAddress: "隧道地址", tunnelMode: "隧道模式", quickTunnel: "Quick Tunnel（推荐）", existingTunnel: "自定义域名", existingTunnelURL: "自定义域名地址", saveTunnel: "保存隧道设置", tunnelSettingsSaved: "隧道设置已保存", invalidTunnelURL: "请输入不带路径的 http(s) 地址", connected: "已连接", revoke: "撤销", copied: "已复制{label}", connectionChecking: "正在检查本地环境...", unableToCheck: "无法检查环境", startingTunnel: "正在启动隧道...", stoppingTunnel: "正在停止隧道...", tunnelOnline: "隧道已上线", tunnelStopped: "隧道已停止", unableChangeTunnel: "无法更改隧道状态", unableSaveTunnel: "无法保存隧道设置", startingAppServer: "正在启动应用服务...", stoppingAppServer: "正在停止应用服务...", appServerRunning: "应用服务运行中", appServerStopped: "应用服务已停止", unableChangeAppServer: "无法更改应用服务状态", unableLoadDevices: "无法加载设备", unableCreatePairing: "无法创建配对码", restartingServer: "正在重启本地服务...", serverRestarted: "本地服务已重启", unableUpdateListen: "无法更新监听地址", unableRevoke: "无法撤销设备", installing: "正在安装 {label}...", upgrading: "正在升级 {label}...", installationFailed: "安装失败"
     }
 };
@@ -52,6 +54,7 @@ const connectButton = document.querySelector<HTMLButtonElement>("#connect")!;
 const refreshButton = document.querySelector<HTMLButtonElement>("#refresh")!;
 const installNodeButton = document.querySelector<HTMLButtonElement>("#install-node")!;
 const installCodexButton = document.querySelector<HTMLButtonElement>("#install-codex")!;
+const configureCodexButton = document.querySelector<HTMLButtonElement>("#configure-codex")!;
 const installCloudflaredButton = document.querySelector<HTMLButtonElement>("#install-cloudflared")!;
 const dashboard = document.querySelector<HTMLElement>("#dashboard")!;
 const appServerState = document.querySelector<HTMLElement>("#app-server-state")!;
@@ -89,6 +92,10 @@ const copyPairingTunnelButton = document.querySelector<HTMLButtonElement>("#copy
 const startPairingAppServerButton = document.querySelector<HTMLButtonElement>("#start-pairing-app-server")!;
 const startPairingTunnelButton = document.querySelector<HTMLButtonElement>("#start-pairing-tunnel")!;
 const closePairingButtons = document.querySelectorAll<HTMLButtonElement>("#close-pairing, #close-pairing-icon");
+const codexEnvironmentDialog = document.querySelector<HTMLDialogElement>("#codex-env-dialog")!;
+const codexEnvironmentInput = document.querySelector<HTMLTextAreaElement>("#codex-environment")!;
+const saveCodexEnvironmentButton = document.querySelector<HTMLButtonElement>("#save-codex-env")!;
+const closeCodexEnvironmentButtons = document.querySelectorAll<HTMLButtonElement>("#close-codex-env, #close-codex-env-icon");
 const deviceList = document.querySelector<HTMLUListElement>("#device-list")!;
 let appServerRunning = false;
 let tunnelRunning = false;
@@ -156,6 +163,7 @@ function render(snapshot: Snapshot) {
     installNodeButton.hidden = snapshot.node.installed;
     installCodexButton.disabled = false;
     installCodexButton.textContent = snapshot.codex.installed ? t("upgrade") : t("install");
+    configureCodexButton.disabled = !snapshot.codex.installed;
     installCloudflaredButton.disabled = false;
     installCloudflaredButton.textContent = snapshot.cloudflared.installed ? t("upgrade") : t("install");
     cloudflaredInstalled = snapshot.cloudflared.installed;
@@ -470,6 +478,33 @@ async function revokeDevice(id: string) {
     }
 }
 
+async function showCodexEnvironment() {
+    configureCodexButton.disabled = true;
+    try {
+        codexEnvironmentInput.value = (await AppService.CodexEnvironment() ?? []).join("\n");
+        codexEnvironmentDialog.showModal();
+        codexEnvironmentInput.focus();
+    } catch (error) {
+        showToast(error instanceof Error ? error.message : t("unableLoadCodexEnvironment"), true);
+    } finally {
+        configureCodexButton.disabled = false;
+    }
+}
+
+async function saveCodexEnvironment() {
+    saveCodexEnvironmentButton.disabled = true;
+    const environment = codexEnvironmentInput.value.split(/\r?\n/).filter((line) => line.trim() !== "");
+    try {
+        renderAppServer(await AppService.SetCodexEnvironment(environment));
+        codexEnvironmentDialog.close();
+        showToast(t("codexEnvironmentSaved"));
+    } catch (error) {
+        showToast(error instanceof Error ? error.message : t("unableSaveCodexEnvironment"), true);
+    } finally {
+        saveCodexEnvironmentButton.disabled = false;
+    }
+}
+
 async function install(kind: "node" | "codex" | "cloudflared") {
     const button = kind === "node" ? installNodeButton : kind === "codex" ? installCodexButton : installCloudflaredButton;
     button.disabled = true;
@@ -488,6 +523,7 @@ async function install(kind: "node" | "codex" | "cloudflared") {
 refreshButton.addEventListener("click", refresh);
 connectButton.addEventListener("click", () => void showConnectionDialog());
 installNodeButton.addEventListener("click", () => void install("node"));
+configureCodexButton.addEventListener("click", () => void showCodexEnvironment());
 installCodexButton.addEventListener("click", () => void install("codex"));
 installCloudflaredButton.addEventListener("click", () => void install("cloudflared"));
 toggleAppServerButton.addEventListener("click", () => void toggleAppServer());
@@ -534,6 +570,8 @@ copyPairingTunnelButton.addEventListener("click", () => void copyText(tunnelURL,
 startPairingAppServerButton.addEventListener("click", () => void startPairingAppServer());
 startPairingTunnelButton.addEventListener("click", () => void startPairingTunnel());
 closePairingButtons.forEach((button) => button.addEventListener("click", () => pairingDialog.close()));
+closeCodexEnvironmentButtons.forEach((button) => button.addEventListener("click", () => codexEnvironmentDialog.close()));
+saveCodexEnvironmentButton.addEventListener("click", () => void saveCodexEnvironment());
 pairingDialog.addEventListener("close", () => { pairingDialogMode = ""; });
 copyMessageButton.addEventListener("click", () => void copyText(messageText.textContent ?? "", "Error"));
 copyAppServerButton.addEventListener("click", () => void copyText(controlAddr, "Local address"));

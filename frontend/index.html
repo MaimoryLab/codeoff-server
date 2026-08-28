@@ -34,7 +34,7 @@
             <div class="panel-heading"><div><p class="eyebrow" data-i18n="environment">ENVIRONMENT</p><h2 id="status-title" data-i18n="environmentStatus">Environment status</h2></div><div class="meta"><strong id="platform">-</strong><span id="checked-at">-</span></div></div>
             <div class="tool-list" aria-label="Local tools" data-i18n-aria-label="localTools">
                 <div class="tool-row"><div><span>Node.js</span><strong id="tool-node" class="tool-status" data-i18n="checking">Checking</strong></div><button id="install-node" class="mini-button" type="button" data-i18n="install">Install</button></div>
-                <div class="tool-row"><div><span>Codex CLI</span><strong id="tool-codex" class="tool-status" data-i18n="checking">Checking</strong></div><button id="install-codex" class="mini-button" type="button" data-i18n="install">Install</button></div>
+                <div class="tool-row"><div><span>Codex CLI</span><strong id="tool-codex" class="tool-status" data-i18n="checking">Checking</strong></div><div class="tool-actions"><button id="configure-codex" class="mini-button" type="button" data-i18n="configure" disabled>Configure</button><button id="install-codex" class="mini-button" type="button" data-i18n="install">Install</button></div></div>
                 <div class="tool-row"><div><span>Cloudflared</span><strong id="tool-cloudflared" class="tool-status" data-i18n="checking">Checking</strong></div><button id="install-cloudflared" class="mini-button" type="button" data-i18n="install">Install</button></div>
             </div>
         </section>
@@ -49,6 +49,11 @@
         <div class="pairing-field"><span data-i18n="tunnelAddress">Tunnel address</span><div><strong id="pairing-tunnel-value"></strong><button id="copy-pairing-tunnel" class="mini-button" type="button" data-i18n="copy">Copy</button><button id="start-pairing-tunnel" class="mini-button" type="button" data-i18n="start">Start</button></div></div>
     </div>
     <button id="close-pairing" class="button dialog-done" type="button" data-i18n="close">Close</button>
+</dialog>
+<dialog id="codex-env-dialog" class="pairing-dialog codex-env-dialog">
+    <div class="dialog-heading"><h2 data-i18n="codexEnvironment">Codex environment</h2><button id="close-codex-env-icon" class="dialog-close" type="button" data-i18n-aria-label="close">&times;</button></div>
+    <label class="environment-field"><span data-i18n="environmentVariables">Environment variables</span><textarea id="codex-environment" rows="10" spellcheck="false" autocomplete="off" placeholder="OPENAI_API_KEY=value&#10;CODEX_HOME=/path/to/codex"></textarea></label>
+    <div class="dialog-actions"><button id="close-codex-env" class="button secondary" type="button" data-i18n="cancel">Cancel</button><button id="save-codex-env" class="button" type="button" data-i18n="save">Save</button></div>
 </dialog>
 <script type="module" src="/src/main.ts"></script>
 </body>

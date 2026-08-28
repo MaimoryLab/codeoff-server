@@ -26,6 +26,10 @@ export function AppServerState(): $CancellablePromise<appserver$0.State> {
     return $Call.ByID(1866680259);
 }
 
+export function CodexEnvironment(): $CancellablePromise<string[] | null> {
+    return $Call.ByID(1422801266);
+}
+
 export function Devices(): $CancellablePromise<devices$0.Device[] | null> {
     return $Call.ByID(4144524189);
 }
@@ -64,6 +68,10 @@ export function RefreshStatus(): $CancellablePromise<diagnostics$0.Snapshot> {
 
 export function RevokeDevice(id: string): $CancellablePromise<void> {
     return $Call.ByID(2660330386, id);
+}
+
+export function SetCodexEnvironment(environment: string[] | null): $CancellablePromise<appserver$0.State> {
+    return $Call.ByID(3129959570, environment);
 }
 
 export function SetListenAddr(address: string): $CancellablePromise<$models.Overview> {

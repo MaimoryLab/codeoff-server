@@ -31,6 +31,7 @@ h2 { margin-bottom: 8px; font-size: 19px; }
 .tool-list { display: grid; }
 .tool-row { min-height: 50px; border-top: 1px solid #252a33; }
 .tool-row div { display: grid; gap: 5px; min-width: 0; }
+.tool-row .tool-actions { display: flex; gap: 6px; }
 .mini-button { border: 1px solid #3a414e; border-radius: 5px; background: transparent; color: #d9dee6; cursor: pointer; font-size: 12px; font-weight: 700; padding: 7px 10px; white-space: nowrap; }
 .mini-button:disabled { cursor: default; opacity: .5; }
 .tool-status { overflow: hidden; color: #8d97a6; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
@@ -84,4 +85,10 @@ h2 { margin-bottom: 8px; font-size: 19px; }
 .pairing-field strong { min-width: 0; overflow: hidden; color: #f2ce8c; font-family: ui-monospace, SFMono-Regular, monospace; text-overflow: ellipsis; white-space: nowrap; }
 .pairing-field button[hidden] { display: none; }
 .dialog-done { width: 100%; margin-top: 16px; }
+.codex-env-dialog { width: min(560px, calc(100% - 32px)); }
+.codex-env-dialog::backdrop { background: rgb(0 0 0 / 55%); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
+.environment-field { display: grid; gap: 8px; margin-top: 16px; color: #8d97a6; font-size: 12px; }
+.environment-field textarea { width: 100%; resize: vertical; min-height: 210px; border: 1px solid #3a414e; border-radius: 5px; outline: none; background: #101218; color: #e9edf2; font: 13px/1.6 ui-monospace, SFMono-Regular, monospace; padding: 10px; }
+.environment-field textarea:focus { border-color: #7d8796; }
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 @media (max-width: 720px) { .shell { width: min(100% - 32px, 920px); padding-top: 32px; } .topbar { gap: 18px; flex-wrap: wrap; } .topbar-actions { margin-left: auto; } .dashboard { grid-template-columns: 1fr; } .dashboard:not(.ready) .environment-card { grid-column: auto; } .panel-heading { gap: 12px; } .service-action { align-items: flex-end; flex-direction: column; gap: 8px; } .listen-settings { grid-template-columns: minmax(0, 1fr) 90px; } .listen-settings button { grid-column: 1 / -1; } .tunnel-settings { grid-template-columns: 1fr; } }
