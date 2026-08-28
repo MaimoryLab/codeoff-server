@@ -79,7 +79,7 @@ func DefaultStatePath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(directory, "codex-remote", "daemon.json"), nil
+	return filepath.Join(directory, "codeoff", "daemon.json"), nil
 }
 
 func DefaultSettingsPath() (string, error) {
@@ -87,7 +87,7 @@ func DefaultSettingsPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(directory, "codex-remote", "settings.json"), nil
+	return filepath.Join(directory, "codeoff", "settings.json"), nil
 }
 
 func LoadTunnelURL(path string) (string, error) {

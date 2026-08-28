@@ -382,7 +382,7 @@ func (s *Server) saveUpload(name string, data io.Reader) (map[string]any, error)
 	if len(extension) > 16 {
 		extension = ""
 	}
-	file, err := os.CreateTemp("", "codex-remote-*"+extension)
+	file, err := os.CreateTemp("", "codeoff-*"+extension)
 	if err != nil {
 		return nil, fmt.Errorf("create upload: %w", err)
 	}

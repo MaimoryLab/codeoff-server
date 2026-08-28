@@ -135,7 +135,7 @@ func DefaultPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(directory, "codex-remote", "devices.json"), nil
+	return filepath.Join(directory, "codeoff", "devices.json"), nil
 }
 
 func (s *Store) NewPairing() (Pairing, error) {
