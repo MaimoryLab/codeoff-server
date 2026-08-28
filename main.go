@@ -87,6 +87,7 @@ func main() {
 		BackgroundColour: application.NewRGB(16, 18, 24),
 		URL:              "/",
 	})
+	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) { window.Focus() })
 	closeWindowHook := window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
 		event.Cancel()
 		window.Hide()
