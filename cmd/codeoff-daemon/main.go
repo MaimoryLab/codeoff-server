@@ -13,6 +13,9 @@ import (
 )
 
 func main() {
+	if err := daemon.MigrateLegacyConfig(); err != nil {
+		log.Fatal(err)
+	}
 	var config daemon.Config
 	flag.StringVar(&config.ListenAddr, "listen", daemon.DefaultListenAddr, "control API listen address")
 	flag.BoolVar(&config.CFTunnel, "cf-tunnel", false, "enable Cloudflare Tunnel")
