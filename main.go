@@ -42,7 +42,7 @@ func main() {
 			UniqueID: "com.maimorylab.codeoff.server",
 			OnSecondInstanceLaunch: func(application.SecondInstanceData) {
 				<-windowReady
-				window.SetAlwaysOnTop(false).Show().Focus()
+				window.Show().Focus()
 			},
 		},
 		Assets: application.AssetOptions{
@@ -141,7 +141,7 @@ func main() {
 	menu.Add("检查更新").OnClick(func(*application.Context) {
 		go showUpdateCheck(context.Background())
 	})
-	menu.Add("打开控制面板").OnClick(func(*application.Context) { window.SetAlwaysOnTop(false).Show().Focus() })
+	menu.Add("打开控制面板").OnClick(func(*application.Context) { window.Show().Focus() })
 	menu.Add("退出").OnClick(func(*application.Context) { app.Quit() })
 	menu.AddSeparator()
 
@@ -157,10 +157,13 @@ func main() {
 	}
 	updateTrayMenu()
 
-	tray := app.SystemTray.New().AttachWindow(window).SetMenu(menu)
+	tray := app.SystemTray.New().SetMenu(menu)
 	tray.OnClick(func() {
-		tray.ToggleWindow()
-		window.SetAlwaysOnTop(false)
+		if window.IsVisible() {
+			window.Hide()
+			return
+		}
+		window.Show().Focus()
 	})
 	if runtime.GOOS == "darwin" {
 		tray.SetTemplateIcon(macTrayIcon)
