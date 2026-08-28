@@ -2,6 +2,8 @@ FROM golang:1-trixie AS builder
 
 WORKDIR /app
 
+ARG APP_VERSION=dev
+
 ENV GO111MODULE=on
 ENV GOPROXY=https://goproxy.cn,direct
 
@@ -10,9 +12,9 @@ RUN go mod download
 
 COPY . .
 RUN --mount=type=cache,target=/root/.cache/go-build \
-	go build -o codeoff-cli ./cmd/codeoff-cli
+	go build -ldflags="-X github.com/MaimoryLab/codeoff-server/internal/buildinfo.Version=${APP_VERSION}" -o codeoff-cli ./cmd/codeoff-cli
 RUN --mount=type=cache,target=/root/.cache/go-build \
-	go build -o codeoff-daemon ./cmd/codeoff-daemon
+	go build -ldflags="-X github.com/MaimoryLab/codeoff-server/internal/buildinfo.Version=${APP_VERSION}" -o codeoff-daemon ./cmd/codeoff-daemon
 
 
 FROM node:26-trixie
