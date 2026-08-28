@@ -71,6 +71,7 @@ func must[T any](value T, err error) T {
 }
 
 func TestServiceStatus(t *testing.T) {
+	text := trayTextFor("zh-CN")
 	for _, test := range []struct {
 		installed bool
 		running   bool
@@ -78,14 +79,30 @@ func TestServiceStatus(t *testing.T) {
 		stopping  bool
 		want      string
 	}{{want: "未安装"}, {installed: true, want: "停止"}, {installed: true, running: true, want: "运行"}, {installed: true, starting: true, want: "启动中"}, {installed: true, stopping: true, want: "停止中"}} {
-		if got := serviceStatus(test.installed, test.running, test.starting, test.stopping); got != test.want {
+		if got := serviceStatus(text, test.installed, test.running, test.starting, test.stopping); got != test.want {
 			t.Fatalf("service status = %q, want %q", got, test.want)
 		}
 	}
 }
 
 func TestToggleLabel(t *testing.T) {
-	if toggleLabel(false) != "启动" || toggleLabel(true) != "停止" {
+	text := trayTextFor("en-US")
+	if toggleLabel(text, false) != "Start" || toggleLabel(text, true) != "Stop" {
 		t.Fatal("unexpected toggle labels")
+	}
+}
+
+func TestTrayLocale(t *testing.T) {
+	for value, want := range map[string]string{
+		"(\n    \"zh-Hans-CN\",\n    \"en-US\"\n)": "zh-Hans-CN",
+		"en_US.UTF-8:zh_CN.UTF-8":                  "en_US.UTF-8",
+		"\r\nzh-CN\r\n":                            "zh-CN",
+	} {
+		if got := primaryLocale(value); got != want {
+			t.Fatalf("primary locale = %q, want %q", got, want)
+		}
+	}
+	if trayTextFor("zh-Hans").quit != "退出" || trayTextFor("en-US").quit != "Quit" {
+		t.Fatal("unexpected tray translations")
 	}
 }

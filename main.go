@@ -4,8 +4,11 @@ import (
 	"context"
 	"embed"
 	"log"
+	"os"
+	"os/exec"
 	"runtime"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/MaimoryLab/codeoff-server/internal/buildinfo"
@@ -103,6 +106,7 @@ func main() {
 		log.Printf("restore services: %v", err)
 	}
 
+	text := trayTextFor(systemLocale())
 	menu := app.NewMenu()
 	var updateTrayMenu func()
 	appServerStatus := menu.Add("").SetEnabled(false)
@@ -133,28 +137,28 @@ func main() {
 		updateTrayMenu()
 	})
 	menu.AddSeparator()
-	preventSleep := menu.AddCheckbox("防止系统休眠", service.preventSleepEnabled()).OnClick(func(ctx *application.Context) {
+	preventSleep := menu.AddCheckbox(text.preventSleep, service.preventSleepEnabled()).OnClick(func(ctx *application.Context) {
 		if err := service.setPreventSleep(ctx.ClickedMenuItem().Checked()); err != nil {
 			log.Printf("set prevent sleep: %v", err)
 		}
 		updateTrayMenu()
 	})
 	menu.AddSeparator()
-	menu.Add("检查更新").OnClick(func(*application.Context) {
+	menu.Add(text.checkUpdates).OnClick(func(*application.Context) {
 		go showUpdateCheck(context.Background())
 	})
-	menu.Add("打开控制面板").OnClick(func(*application.Context) { window.Show().Focus() })
-	menu.Add("退出").OnClick(func(*application.Context) { app.Quit() })
+	menu.Add(text.openDashboard).OnClick(func(*application.Context) { window.Show().Focus() })
+	menu.Add(text.quit).OnClick(func(*application.Context) { app.Quit() })
 	menu.AddSeparator()
 
 	updateTrayMenu = func() {
 		overview := service.Overview()
-		appServerStatus.SetLabel("App-server：" + serviceStatus(overview.Environment.AppServer.Installed, overview.AppServer.Running, overview.AppServer.Starting, overview.AppServer.Stopping))
+		appServerStatus.SetLabel("App-server" + text.statusSeparator + serviceStatus(text, overview.Environment.AppServer.Installed, overview.AppServer.Running, overview.AppServer.Starting, overview.AppServer.Stopping))
 		appServerAddress.SetLabel(overview.ControlAddr).SetHidden(!overview.AppServer.Running)
-		appServerToggle.SetLabel(toggleLabel(overview.AppServer.Running || overview.AppServer.Starting)).SetEnabled(overview.Environment.AppServer.Installed && !overview.AppServer.Starting && !overview.AppServer.Stopping)
-		tunnelStatus.SetLabel("Tunnel：" + serviceStatus(overview.Environment.Cloudflared.Installed || overview.Tunnel.External, overview.Tunnel.Running, overview.Tunnel.Starting, overview.Tunnel.Stopping))
+		appServerToggle.SetLabel(toggleLabel(text, overview.AppServer.Running || overview.AppServer.Starting)).SetEnabled(overview.Environment.AppServer.Installed && !overview.AppServer.Starting && !overview.AppServer.Stopping)
+		tunnelStatus.SetLabel("Tunnel" + text.statusSeparator + serviceStatus(text, overview.Environment.Cloudflared.Installed || overview.Tunnel.External, overview.Tunnel.Running, overview.Tunnel.Starting, overview.Tunnel.Stopping))
 		tunnelAddress.SetLabel(overview.Tunnel.URL).SetHidden(!overview.Tunnel.Running)
-		tunnelToggle.SetLabel(toggleLabel(overview.Tunnel.Running || overview.Tunnel.Starting)).SetHidden(overview.Tunnel.External).SetEnabled(overview.Environment.Cloudflared.Installed && !overview.Tunnel.External && !overview.Tunnel.Starting && !overview.Tunnel.Stopping)
+		tunnelToggle.SetLabel(toggleLabel(text, overview.Tunnel.Running || overview.Tunnel.Starting)).SetHidden(overview.Tunnel.External).SetEnabled(overview.Environment.Cloudflared.Installed && !overview.Tunnel.External && !overview.Tunnel.Starting && !overview.Tunnel.Stopping)
 		preventSleep.SetChecked(service.preventSleepEnabled())
 	}
 	updateTrayMenu()
@@ -213,25 +217,78 @@ func otaAssetMatcher(req updater.CheckRequest, assets []github.ReleaseAsset) int
 	return slices.IndexFunc(assets, func(asset github.ReleaseAsset) bool { return asset.Name == want })
 }
 
-func serviceStatus(installed, running, starting, stopping bool) string {
-	if !installed {
-		return "未安装"
-	}
-	if starting {
-		return "启动中"
-	}
-	if stopping {
-		return "停止中"
-	}
-	if running {
-		return "运行"
-	}
-	return "停止"
+type trayText struct {
+	preventSleep, checkUpdates, openDashboard, quit                 string
+	notInstalled, starting, stopping, running, stopped, start, stop string
+	statusSeparator                                                 string
 }
 
-func toggleLabel(running bool) string {
-	if running {
-		return "停止"
+func trayTextFor(locale string) trayText {
+	if strings.HasPrefix(strings.ToLower(locale), "zh") {
+		return trayText{
+			preventSleep: "防止系统休眠", checkUpdates: "检查更新", openDashboard: "打开控制面板", quit: "退出",
+			notInstalled: "未安装", starting: "启动中", stopping: "停止中", running: "运行", stopped: "停止", start: "启动", stop: "停止",
+			statusSeparator: "：",
+		}
 	}
-	return "启动"
+	return trayText{
+		preventSleep: "Prevent System Sleep", checkUpdates: "Check for Updates", openDashboard: "Open Dashboard", quit: "Quit",
+		notInstalled: "Not Installed", starting: "Starting", stopping: "Stopping", running: "Running", stopped: "Stopped", start: "Start", stop: "Stop",
+		statusSeparator: ": ",
+	}
+}
+
+func systemLocale() string {
+	var command *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		command = exec.Command("defaults", "read", "-g", "AppleLanguages")
+	case "windows":
+		command = exec.Command("powershell.exe", "-NoProfile", "-NonInteractive", "-Command", "[Globalization.CultureInfo]::CurrentUICulture.Name")
+	}
+	if command != nil {
+		if output, err := command.Output(); err == nil {
+			if locale := primaryLocale(string(output)); locale != "" {
+				return locale
+			}
+		}
+	}
+	for _, name := range []string{"LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"} {
+		if locale := primaryLocale(os.Getenv(name)); locale != "" {
+			return locale
+		}
+	}
+	return "en"
+}
+
+func primaryLocale(value string) string {
+	for locale := range strings.FieldsFuncSeq(value, func(r rune) bool { return r == ',' || r == ':' || r == '\n' }) {
+		if locale = strings.Trim(locale, " \t\r\"()"); locale != "" {
+			return locale
+		}
+	}
+	return ""
+}
+
+func serviceStatus(text trayText, installed, running, starting, stopping bool) string {
+	if !installed {
+		return text.notInstalled
+	}
+	if starting {
+		return text.starting
+	}
+	if stopping {
+		return text.stopping
+	}
+	if running {
+		return text.running
+	}
+	return text.stopped
+}
+
+func toggleLabel(text trayText, running bool) string {
+	if running {
+		return text.stop
+	}
+	return text.start
 }
