@@ -50,3 +50,58 @@ func TestLoadTunnelURL(t *testing.T) {
 		t.Fatalf("tunnel URL = %q, %v", got, err)
 	}
 }
+
+func TestMigrateConfigDir(t *testing.T) {
+	t.Run("renames legacy directory", func(t *testing.T) {
+		root := t.TempDir()
+		oldPath, newPath := filepath.Join(root, "codex-server"), filepath.Join(root, "codeoff")
+		if err := os.Mkdir(oldPath, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(oldPath, "settings.json"), []byte("legacy"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := migrateConfigDir(oldPath, newPath); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
+			t.Fatalf("legacy directory still exists: %v", err)
+		}
+		data, err := os.ReadFile(filepath.Join(newPath, "settings.json"))
+		if err != nil || string(data) != "legacy" {
+			t.Fatalf("migrated settings = %q, %v", data, err)
+		}
+	})
+
+	t.Run("merges into existing directory", func(t *testing.T) {
+		root := t.TempDir()
+		oldPath, newPath := filepath.Join(root, "codex-remote"), filepath.Join(root, "codeoff")
+		if err := os.MkdirAll(oldPath, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Mkdir(newPath, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(oldPath, "daemon.json"), []byte("legacy"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(oldPath, "settings.json"), []byte("old"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(newPath, "settings.json"), []byte("new"), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if err := migrateConfigDir(oldPath, newPath); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
+			t.Fatalf("legacy directory still exists: %v", err)
+		}
+		for name, want := range map[string]string{"daemon.json": "legacy", "settings.json": "new"} {
+			data, err := os.ReadFile(filepath.Join(newPath, name))
+			if err != nil || string(data) != want {
+				t.Fatalf("%s = %q, %v", name, data, err)
+			}
+		}
+	})
+}

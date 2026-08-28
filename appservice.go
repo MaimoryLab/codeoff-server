@@ -69,6 +69,9 @@ type Overview struct {
 }
 
 func NewAppService() (*AppService, error) {
+	if err := daemon.MigrateLegacyConfig(); err != nil {
+		return nil, fmt.Errorf("migrate legacy config: %w", err)
+	}
 	devicePath, err := devices.DefaultPath()
 	if err != nil {
 		return nil, err

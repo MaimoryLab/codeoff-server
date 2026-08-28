@@ -27,7 +27,10 @@ import (
 const (
 	DefaultListenAddr = "127.0.0.1:11037"
 	DefaultTunnelMode = "quick"
+	configDirName     = "codeoff"
 )
+
+var legacyConfigDirNames = []string{"codex-server", "codex-remote"}
 
 type Config struct {
 	ListenAddr      string
@@ -79,7 +82,7 @@ func DefaultStatePath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(directory, "codeoff", "daemon.json"), nil
+	return filepath.Join(directory, configDirName, "daemon.json"), nil
 }
 
 func DefaultSettingsPath() (string, error) {
@@ -87,7 +90,67 @@ func DefaultSettingsPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(directory, "codeoff", "settings.json"), nil
+	return filepath.Join(directory, configDirName, "settings.json"), nil
+}
+
+// MigrateLegacyConfig moves data from the pre-Codeoff config directories once.
+func MigrateLegacyConfig() error {
+	directory, err := os.UserConfigDir()
+	if err != nil {
+		return err
+	}
+	current := filepath.Join(directory, configDirName)
+	for _, name := range legacyConfigDirNames {
+		if err := migrateConfigDir(filepath.Join(directory, name), current); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func migrateConfigDir(oldPath, newPath string) error {
+	oldInfo, err := os.Stat(oldPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	newInfo, err := os.Stat(newPath)
+	if errors.Is(err, os.ErrNotExist) {
+		if err := os.MkdirAll(filepath.Dir(newPath), 0o700); err != nil {
+			return err
+		}
+		if err := os.Rename(oldPath, newPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !oldInfo.IsDir() || !newInfo.IsDir() {
+		return fmt.Errorf("cannot migrate %q to existing non-directory %q", oldPath, newPath)
+	}
+	entries, err := os.ReadDir(oldPath)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		target := filepath.Join(newPath, entry.Name())
+		if _, err := os.Stat(target); err == nil {
+			continue
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		if err := os.Rename(filepath.Join(oldPath, entry.Name()), target); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+	}
+	if err := os.RemoveAll(oldPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
 }
 
 func LoadTunnelURL(path string) (string, error) {
@@ -139,6 +202,9 @@ func New(config Config) (*Service, error) {
 		return nil, err
 	}
 	config.ListenAddr = address
+	if err := MigrateLegacyConfig(); err != nil {
+		return nil, fmt.Errorf("migrate legacy config: %w", err)
+	}
 	devicePath, err := devices.DefaultPath()
 	if err != nil {
 		return nil, err
