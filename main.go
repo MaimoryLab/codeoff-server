@@ -143,6 +143,22 @@ func main() {
 		}
 		updateTrayMenu()
 	})
+	autostartEnabled, err := app.Autostart.IsEnabled()
+	if err != nil {
+		log.Printf("check autostart: %v", err)
+	}
+	autostart := menu.AddCheckbox(text.autostart, autostartEnabled).OnClick(func(ctx *application.Context) {
+		var err error
+		if ctx.ClickedMenuItem().Checked() {
+			err = app.Autostart.Enable()
+		} else {
+			err = app.Autostart.Disable()
+		}
+		if err != nil {
+			log.Printf("set autostart: %v", err)
+		}
+		updateTrayMenu()
+	})
 	menu.AddSeparator()
 	menu.Add(text.checkUpdates).OnClick(func(*application.Context) {
 		go showUpdateCheck(context.Background())
@@ -160,6 +176,9 @@ func main() {
 		tunnelAddress.SetLabel(overview.Tunnel.URL).SetHidden(!overview.Tunnel.Running)
 		tunnelToggle.SetLabel(toggleLabel(text, overview.Tunnel.Running || overview.Tunnel.Starting)).SetHidden(overview.Tunnel.External).SetEnabled(overview.Environment.Cloudflared.Installed && !overview.Tunnel.External && !overview.Tunnel.Starting && !overview.Tunnel.Stopping)
 		preventSleep.SetChecked(service.preventSleepEnabled())
+		if enabled, err := app.Autostart.IsEnabled(); err == nil {
+			autostart.SetChecked(enabled)
+		}
 	}
 	updateTrayMenu()
 
@@ -218,7 +237,7 @@ func otaAssetMatcher(req updater.CheckRequest, assets []github.ReleaseAsset) int
 }
 
 type trayText struct {
-	preventSleep, checkUpdates, openDashboard, quit                 string
+	preventSleep, autostart, checkUpdates, openDashboard, quit      string
 	notInstalled, starting, stopping, running, stopped, start, stop string
 	statusSeparator                                                 string
 }
@@ -226,13 +245,13 @@ type trayText struct {
 func trayTextFor(locale string) trayText {
 	if strings.HasPrefix(strings.ToLower(locale), "zh") {
 		return trayText{
-			preventSleep: "防止系统休眠", checkUpdates: "检查更新", openDashboard: "打开控制面板", quit: "退出",
+			preventSleep: "防止系统休眠", autostart: "开机自启", checkUpdates: "检查更新", openDashboard: "打开控制面板", quit: "退出",
 			notInstalled: "未安装", starting: "启动中", stopping: "停止中", running: "运行", stopped: "停止", start: "启动", stop: "停止",
 			statusSeparator: "：",
 		}
 	}
 	return trayText{
-		preventSleep: "Prevent System Sleep", checkUpdates: "Check for Updates", openDashboard: "Open Dashboard", quit: "Quit",
+		preventSleep: "Prevent System Sleep", autostart: "Launch at Login", checkUpdates: "Check for Updates", openDashboard: "Open Dashboard", quit: "Quit",
 		notInstalled: "Not Installed", starting: "Starting", stopping: "Stopping", running: "Running", stopped: "Stopped", start: "Start", stop: "Stop",
 		statusSeparator: ": ",
 	}

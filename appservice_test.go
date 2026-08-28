@@ -102,7 +102,7 @@ func TestTrayLocale(t *testing.T) {
 			t.Fatalf("primary locale = %q, want %q", got, want)
 		}
 	}
-	if trayTextFor("zh-Hans").quit != "退出" || trayTextFor("en-US").quit != "Quit" {
+	if trayTextFor("zh-Hans").quit != "退出" || trayTextFor("zh-Hans").autostart != "开机自启" || trayTextFor("en-US").quit != "Quit" || trayTextFor("en-US").autostart != "Launch at Login" {
 		t.Fatal("unexpected tray translations")
 	}
 }
