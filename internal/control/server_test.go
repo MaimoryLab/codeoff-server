@@ -60,6 +60,14 @@ func (s *fakeRemoteAppServer) TakeOverThread(context.Context, string) (json.RawM
 func (s *fakeRemoteAppServer) Respond(int64, any, *appserver.RPCError) error { return nil }
 func (s *fakeRemoteAppServer) Events() <-chan appserver.Event                { return s.events }
 
+func TestApprovalResponseAcceptsZeroRequestID(t *testing.T) {
+	session := websocketSession{appServer: new(fakeRemoteAppServer)}
+	_, status, err := session.approve(map[string]any{"requestId": float64(0), "decision": "accept"})
+	if err != nil || status != http.StatusNoContent {
+		t.Fatalf("approve zero request ID: status = %d, err = %v", status, err)
+	}
+}
+
 func TestStartUsesConfiguredAddress(t *testing.T) {
 	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
 	if err != nil {

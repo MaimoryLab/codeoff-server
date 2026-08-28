@@ -317,7 +317,7 @@ func (s *websocketSession) turn(params map[string]any, method string) (any, int,
 
 func (s *websocketSession) approve(params map[string]any) (any, int, error) {
 	requestID, ok := params["requestId"].(float64)
-	if !ok || requestID <= 0 || requestID != float64(int64(requestID)) {
+	if !ok || requestID != float64(int64(requestID)) {
 		return nil, http.StatusBadRequest, errors.New("invalid approval request id")
 	}
 	decision, ok := params["decision"]
