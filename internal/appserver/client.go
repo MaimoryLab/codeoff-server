@@ -71,9 +71,10 @@ type Client struct {
 	stop      func()
 }
 
-func Start(ctx context.Context, executable string, args ...string) (*Client, error) {
+func Start(ctx context.Context, executable string, environment []string, args ...string) (*Client, error) {
 	processCtx, cancel := context.WithCancel(ctx)
 	command := exec.CommandContext(processCtx, executable, args...)
+	command.Env = append(command.Environ(), environment...)
 	stdin, err := command.StdinPipe()
 	if err != nil {
 		cancel()

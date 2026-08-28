@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"sync"
 	"time"
 
@@ -22,7 +23,7 @@ type State struct {
 	Error     string    `json:"error,omitempty"`
 }
 
-type startClient func(context.Context, string, ...string) (*Client, error)
+type startClient func(context.Context, string, []string, ...string) (*Client, error)
 
 type Manager struct {
 	operationMu sync.Mutex
@@ -35,6 +36,7 @@ type Manager struct {
 	executable  string
 	terminate   func(context.Context, string, string) error
 	onStopped   func()
+	environment []string
 }
 
 func NewManager() *Manager {
@@ -49,10 +51,10 @@ func newManager(start startClient) *Manager {
 	}
 }
 
-func (m *Manager) Start(ctx context.Context, executable string) (State, error) {
+func (m *Manager) Start(ctx context.Context, executable string, environment []string) (State, error) {
 	m.operationMu.Lock()
 	defer m.operationMu.Unlock()
-	return m.startLocked(ctx, executable)
+	return m.startLocked(ctx, executable, environment)
 }
 
 func (m *Manager) Toggle(ctx context.Context, executable string) (State, error) {
@@ -65,17 +67,17 @@ func (m *Manager) Toggle(ctx context.Context, executable string) (State, error) 
 	if executable == "" {
 		return m.State(), errors.New("codex CLI is not installed")
 	}
-	return m.startLocked(ctx, executable)
+	return m.startLocked(ctx, executable, nil)
 }
 
-func (m *Manager) startLocked(ctx context.Context, executable string) (State, error) {
+func (m *Manager) startLocked(ctx context.Context, executable string, environment []string) (State, error) {
 	if state := m.State(); state.Running || state.Starting || state.Stopping {
 		return state, nil
 	}
 	m.setState(State{Starting: true})
 
 	processCtx, cancel := context.WithCancel(context.Background())
-	client, err := m.start(processCtx, executable, "app-server", "--stdio")
+	client, err := m.start(processCtx, executable, environment, "app-server", "--stdio")
 	if err != nil {
 		cancel()
 		return m.fail(err), err
@@ -104,6 +106,7 @@ func (m *Manager) startLocked(ctx context.Context, executable string) (State, er
 	m.cancel = cancel
 	m.state = state
 	m.executable = executable
+	m.environment = slices.Clone(environment)
 	m.mu.Unlock()
 	go m.watch(client)
 	return state, nil
@@ -179,7 +182,7 @@ func (m *Manager) ReleaseThread(ctx context.Context, threadID string) (bool, err
 	m.operationMu.Lock()
 	defer m.operationMu.Unlock()
 	m.mu.RLock()
-	client, executable := m.client, m.executable
+	client, executable, environment := m.client, m.executable, slices.Clone(m.environment)
 	m.mu.RUnlock()
 	if client == nil {
 		return false, errors.New("app-server is not running")
@@ -192,7 +195,7 @@ func (m *Manager) ReleaseThread(ctx context.Context, threadID string) (bool, err
 		return false, err
 	}
 	stopErr := m.stopLocked()
-	_, startErr := m.startLocked(ctx, executable)
+	_, startErr := m.startLocked(ctx, executable, environment)
 	return startErr == nil, errors.Join(stopErr, startErr)
 }
 

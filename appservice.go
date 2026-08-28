@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -27,6 +28,8 @@ import (
 )
 
 const defaultListenAddr = "127.0.0.1:11037"
+
+var environmentName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 type AppService struct {
 	mu           sync.RWMutex
@@ -47,11 +50,12 @@ type AppService struct {
 }
 
 type settings struct {
-	ListenAddr       string `json:"listenAddr"`
-	AppServerEnabled bool   `json:"appServerEnabled"`
-	TunnelEnabled    bool   `json:"tunnelEnabled"`
-	TunnelURL        string `json:"tunnelUrl,omitempty"`
-	PreventSleep     bool   `json:"preventSleep"`
+	ListenAddr       string   `json:"listenAddr"`
+	AppServerEnabled bool     `json:"appServerEnabled"`
+	TunnelEnabled    bool     `json:"tunnelEnabled"`
+	TunnelURL        string   `json:"tunnelUrl,omitempty"`
+	PreventSleep     bool     `json:"preventSleep"`
+	CodexEnvironment []string `json:"codexEnvironment,omitempty"`
 }
 
 type Overview struct {
@@ -214,8 +218,33 @@ func (s *AppService) startAppServer() (appserver.State, error) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	state, err := s.appServer.Start(ctx, status.Codex.Path)
+	s.mu.RLock()
+	environment := slices.Clone(s.settings.CodexEnvironment)
+	s.mu.RUnlock()
+	state, err := s.appServer.Start(ctx, status.Codex.Path, environment)
 	return state, errors.Join(err, s.syncPreventSleep())
+}
+
+func (s *AppService) CodexEnvironment() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return slices.Clone(s.settings.CodexEnvironment)
+}
+
+func (s *AppService) SetCodexEnvironment(environment []string) (appserver.State, error) {
+	if err := validateEnvironment(environment); err != nil {
+		return s.appServer.State(), err
+	}
+	if err := s.updateSettings(func(settings *settings) { settings.CodexEnvironment = slices.Clone(environment) }); err != nil {
+		return s.appServer.State(), err
+	}
+	if !s.appServer.State().Running {
+		return s.appServer.State(), nil
+	}
+	if err := s.appServer.Stop(); err != nil {
+		return s.appServer.State(), err
+	}
+	return s.startAppServer()
 }
 
 func (s *AppService) StopAppServer() (appserver.State, error) {
@@ -417,6 +446,9 @@ func loadSettings(path string) (settings, error) {
 	if err := json.Unmarshal(data, &loaded); err != nil {
 		return loaded, fmt.Errorf("read settings: %w", err)
 	}
+	if err := validateEnvironment(loaded.CodexEnvironment); err != nil {
+		return loaded, err
+	}
 	loaded.ListenAddr, err = validateListenAddr(loaded.ListenAddr)
 	return loaded, err
 }
@@ -456,4 +488,19 @@ func validateTunnelURL(raw string) (string, error) {
 		return "", errors.New("tunnel URL must be an http(s) origin without a path")
 	}
 	return value, nil
+}
+
+func validateEnvironment(environment []string) error {
+	seen := make(map[string]struct{}, len(environment))
+	for _, entry := range environment {
+		name, _, ok := strings.Cut(entry, "=")
+		if !ok || !environmentName.MatchString(name) || strings.ContainsRune(entry, '\x00') {
+			return fmt.Errorf("invalid environment variable %q; expected NAME=value", entry)
+		}
+		if _, exists := seen[name]; exists {
+			return fmt.Errorf("duplicate environment variable %q", name)
+		}
+		seen[name] = struct{}{}
+	}
+	return nil
 }

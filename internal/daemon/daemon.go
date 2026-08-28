@@ -188,7 +188,7 @@ func (s *Service) Start(ctx context.Context) error {
 		_ = server.Close(context.Background())
 		return err
 	}
-	if _, err := s.app.Start(ctx, config.CodexPath); err != nil {
+	if _, err := s.app.Start(ctx, config.CodexPath, nil); err != nil {
 		_ = s.Shutdown()
 		return fmt.Errorf("start app-server: %w", err)
 	}
@@ -292,7 +292,7 @@ func (s *Service) RestartAppServer() error {
 	if executable == "" {
 		return errors.New("codex CLI is not installed")
 	}
-	_, err := s.app.Start(context.Background(), executable)
+	_, err := s.app.Start(context.Background(), executable, nil)
 	if err == nil {
 		log.Printf("app-server started")
 	}

@@ -3,6 +3,7 @@ package main
 import (
 	"net"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"testing"
 )
@@ -13,12 +14,12 @@ func TestSettings(t *testing.T) {
 	if err != nil || loaded.ListenAddr != defaultListenAddr {
 		t.Fatalf("default settings = %#v, %v", loaded, err)
 	}
-	want := settings{ListenAddr: "0.0.0.0:12000", AppServerEnabled: true, TunnelEnabled: true, PreventSleep: true}
+	want := settings{ListenAddr: "0.0.0.0:12000", AppServerEnabled: true, TunnelEnabled: true, PreventSleep: true, CodexEnvironment: []string{"CODEX_HOME=/tmp/codex"}}
 	if err := saveSettings(path, want); err != nil {
 		t.Fatal(err)
 	}
 	got, err := loadSettings(path)
-	if err != nil || got != want {
+	if err != nil || !reflect.DeepEqual(got, want) {
 		t.Fatalf("saved settings = %#v, %v", got, err)
 	}
 	if _, err := validateListenAddr("localhost:11037"); err == nil {
@@ -29,6 +30,17 @@ func TestSettings(t *testing.T) {
 	}
 	if _, err := validateTunnelURL("https://remote.example.com/app"); err == nil {
 		t.Fatal("tunnel URL path should be rejected")
+	}
+}
+
+func TestValidateEnvironment(t *testing.T) {
+	if err := validateEnvironment([]string{"CODEX_HOME=/tmp/codex", "EMPTY="}); err != nil {
+		t.Fatal(err)
+	}
+	for _, environment := range [][]string{{"INVALID"}, {"1INVALID=value"}, {"DUP=1", "DUP=2"}} {
+		if err := validateEnvironment(environment); err == nil {
+			t.Fatalf("environment %q should be rejected", environment)
+		}
 	}
 }
 

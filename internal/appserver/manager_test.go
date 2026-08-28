@@ -25,7 +25,7 @@ func (t *blockingTransport) Close() error {
 
 func TestManagerStartAndStop(t *testing.T) {
 	var stopped atomic.Int32
-	manager := newManager(func(context.Context, string, ...string) (*Client, error) {
+	manager := newManager(func(context.Context, string, []string, ...string) (*Client, error) {
 		clientTransport, serverTransport := net.Pipe()
 		go serveInitialize(serverTransport)
 		return New(clientTransport), nil
@@ -75,14 +75,14 @@ func TestManagerReleaseThread(t *testing.T) {
 	for _, status := range []string{"idle", "active"} {
 		t.Run(status, func(t *testing.T) {
 			starts := 0
-			manager := newManager(func(context.Context, string, ...string) (*Client, error) {
+			manager := newManager(func(context.Context, string, []string, ...string) (*Client, error) {
 				starts++
 				clientTransport, serverTransport := net.Pipe()
 				go serveRelease(serverTransport, status)
 				return New(clientTransport), nil
 			})
 			t.Cleanup(func() { _ = manager.Stop() })
-			if _, err := manager.Start(context.Background(), "codex"); err != nil {
+			if _, err := manager.Start(context.Background(), "codex", nil); err != nil {
 				t.Fatal(err)
 			}
 			released, err := manager.ReleaseThread(context.Background(), "thread-42")
@@ -105,7 +105,7 @@ func TestManagerReleaseThread(t *testing.T) {
 
 func TestManagerTakeOverThread(t *testing.T) {
 	var terminated atomic.Bool
-	manager := newManager(func(context.Context, string, ...string) (*Client, error) {
+	manager := newManager(func(context.Context, string, []string, ...string) (*Client, error) {
 		clientTransport, serverTransport := net.Pipe()
 		go serveTakeover(serverTransport, &terminated)
 		return New(clientTransport), nil
@@ -118,7 +118,7 @@ func TestManagerTakeOverThread(t *testing.T) {
 		return nil
 	}
 	t.Cleanup(func() { _ = manager.Stop() })
-	if _, err := manager.Start(context.Background(), "codex"); err != nil {
+	if _, err := manager.Start(context.Background(), "codex", nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -134,7 +134,7 @@ func TestManagerTakeOverThread(t *testing.T) {
 func TestManagerTakeOverThreadReleasesOwnLock(t *testing.T) {
 	var unsubscribed atomic.Bool
 	var terminated atomic.Bool
-	manager := newManager(func(context.Context, string, ...string) (*Client, error) {
+	manager := newManager(func(context.Context, string, []string, ...string) (*Client, error) {
 		clientTransport, serverTransport := net.Pipe()
 		go serveOwnTakeover(serverTransport, &unsubscribed)
 		return New(clientTransport), nil
@@ -144,7 +144,7 @@ func TestManagerTakeOverThreadReleasesOwnLock(t *testing.T) {
 		return nil
 	}
 	t.Cleanup(func() { _ = manager.Stop() })
-	if _, err := manager.Start(context.Background(), "codex"); err != nil {
+	if _, err := manager.Start(context.Background(), "codex", nil); err != nil {
 		t.Fatal(err)
 	}
 
