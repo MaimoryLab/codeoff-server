@@ -17,7 +17,7 @@
         PackageDisplayName="Codeoff Server"
         PublisherName="CN=MaimoryLab"
         PublisherDisplayName="MaimoryLab"
-        Version="1.2.0.0"
+        Version="1.2.2.0"
         PackageDescription="Local Codex remote control">
         <Capabilities>
             <Capability Name="runFullTrust" />

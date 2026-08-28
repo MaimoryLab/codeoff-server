@@ -17,7 +17,7 @@ permissions:
 
 env:
   RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
-  WAILS_VERSION: v3.0.0-beta.14
+  WAILS_VERSION: v3.0.0-beta.15
 
 concurrency:
   group: build-artifacts-${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
