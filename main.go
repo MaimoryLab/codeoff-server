@@ -82,6 +82,7 @@ func main() {
 		Title:            "Codeoff Server",
 		Width:            900,
 		Height:           600,
+		AlwaysOnTop:      false,
 		BackgroundColour: application.NewRGB(16, 18, 24),
 		URL:              "/",
 	})
