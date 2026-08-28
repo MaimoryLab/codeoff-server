@@ -67,6 +67,9 @@ type pairing struct {
 }
 
 func main() {
+	if err := daemon.MigrateLegacyConfig(); err != nil {
+		fatal(err)
+	}
 	statePath := flag.String("state", "", "daemon state file")
 	flag.BoolVar(&jsonOutput, "json", false, "print machine-readable JSON")
 	flag.StringVar(&qrDir, "qr-dir", "", "directory for QR PNG files (default: render in terminal)")
