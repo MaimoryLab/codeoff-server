@@ -1,0 +1,375 @@
+openapi: 3.1.0
+info:
+  title: Codeoff Server control API
+  version: 1.0.0
+  license:
+    name: Apache 2.0
+    identifier: Apache-2.0
+  description: |
+    HTTP and WebSocket control API exposed by Codeoff Server. The desktop
+    application and the optional daemon expose the same device endpoints;
+    admin endpoints are enabled by the daemon only.
+servers:
+  - url: "{origin}"
+    variables:
+      origin:
+        default: http://127.0.0.1:11037
+        description: Control API origin (HTTP or HTTPS).
+tags:
+  - name: pairing
+    description: One-time device pairing.
+  - name: device
+    description: Operations authenticated with a paired device token.
+  - name: admin
+    description: Local daemon administration authenticated with the admin token.
+  - name: websocket
+    description: Device control and Codex event stream.
+paths:
+  /api/v1/pair/exchange:
+    post:
+      tags: [pairing]
+      operationId: exchangePairingCode
+      summary: Exchange a one-time pairing code for a device token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PairExchangeRequest' }
+      responses:
+        '200':
+          description: Device paired; the returned token is used for subsequent device requests.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PairExchangeResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/upload:
+    post:
+      tags: [device]
+      operationId: uploadFile
+      summary: Upload a file for use in a turn
+      security: [{ deviceBearer: [] }]
+      parameters:
+        - name: name
+          in: query
+          required: true
+          description: Original file name. The server stores the file in a temporary location.
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema: { type: string, format: binary, maxLength: 26214400 }
+      responses:
+        '200':
+          description: Temporary upload created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UploadResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/file:
+    get:
+      tags: [device]
+      operationId: downloadFile
+      summary: Download a local file
+      security: [{ deviceBearer: [] }]
+      parameters:
+        - name: path
+          in: query
+          required: true
+          description: Absolute local file path returned by upload or directory operations.
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: File contents. Content-Type is detected from the file.
+          content:
+            application/octet-stream: { schema: { type: string, format: binary } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '413': { $ref: '#/components/responses/TooLarge' }
+  /api/v1/ws:
+    get:
+      tags: [websocket]
+      operationId: connectControlWebSocket
+      summary: Open the device control WebSocket
+      description: |
+        Upgrade this request to a WebSocket and send UTF-8 text frames. Every
+        request has a positive integer `id`, a `method`, and optional object
+        `params`; the server replies with the same `id` and either `result` or
+        `error`. App-server events are pushed as messages with `method` and
+        `params` (and an optional `id`).
+
+        Supported methods and required parameters:
+
+        | Method | Parameters |
+        | --- | --- |
+        | `heartbeat` | none |
+        | `status` | none |
+        | `directories` | optional `path` |
+        | `directory/create` | `path`, `name` |
+        | `thread/list`, `thread/start` | Parameters are forwarded to Codex app-server. |
+        | `thread/read` | Parameters are forwarded; `includeTurns` is forced true. |
+        | `thread/resume`, `thread/release`, `thread/takeover` | `threadId` |
+        | `thread/unsubscribe`, `thread/archive` | Parameters are forwarded to Codex app-server. |
+        | `thread/name/set` | `name` |
+        | `turn/start` | `threadId` and `input` or `attachments`; optional permission fields. |
+        | `turn/steer` | `threadId`, `turnId`, and `input` or `attachments`; optional permission fields. |
+        | `turn/interrupt` | Parameters are forwarded to Codex app-server. |
+        | `approval/respond` | integer `requestId`, and a valid `decision`. |
+
+        `approvalPolicy` and `sandboxPolicy` must be supplied together. The
+        accepted policies are `on-request` or `never`, and sandbox types are
+        `workspaceWrite` or `dangerFullAccess`.
+      security: [{ deviceBearer: [] }]
+      x-websocket: true
+      x-websocket-protocol:
+        request: { $ref: '#/components/schemas/WebSocketRequest' }
+        response: { $ref: '#/components/schemas/WebSocketResponse' }
+        event: { $ref: '#/components/schemas/WebSocketEvent' }
+      responses:
+        '200':
+          description: HTTP fallback response; successful WebSocket connections use 101.
+        '101':
+          description: WebSocket protocol upgrade.
+          headers:
+            X-Codeoff-Server-Version:
+              schema: { type: string }
+            X-Codeoff-Min-Client-Version:
+              schema: { type: string, example: 1.0.0 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/admin/status:
+    get:
+      tags: [admin]
+      operationId: getAdminStatus
+      summary: Get daemon and control status
+      security: [{ adminBearer: [] }]
+      responses:
+        '200':
+          description: Current status snapshot.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/ControlStatus' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/admin/devices:
+    get:
+      tags: [admin]
+      operationId: listDevices
+      summary: List paired devices
+      security: [{ adminBearer: [] }]
+      responses:
+        '200':
+          description: Paired devices.
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Device' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/v1/admin/pair:
+    post:
+      tags: [admin]
+      operationId: createPairingCode
+      summary: Create a one-time pairing code
+      security: [{ adminBearer: [] }]
+      responses:
+        '200':
+          description: Pairing code valid for ten minutes and single use.
+          content:
+            application/json: { schema: { $ref: '#/components/schemas/Pairing' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/admin/revoke:
+    post:
+      tags: [admin]
+      operationId: revokeDevice
+      summary: Revoke a paired device token
+      security: [{ adminBearer: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id]
+              properties: { id: { type: string, minLength: 1 } }
+      responses:
+        '200':
+          description: Device revoked.
+          content: { application/json: { schema: { $ref: '#/components/schemas/OK' } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/admin/restart/appserver:
+    post:
+      tags: [admin]
+      operationId: restartAppServer
+      summary: Restart the Codex app-server
+      security: [{ adminBearer: [] }]
+      responses: { '200': { $ref: '#/components/responses/ActionAccepted' }, '401': { $ref: '#/components/responses/Unauthorized' }, '500': { $ref: '#/components/responses/InternalError' } }
+  /api/v1/admin/restart/tunnel:
+    post:
+      tags: [admin]
+      operationId: restartTunnel
+      summary: Restart the Cloudflare Tunnel
+      security: [{ adminBearer: [] }]
+      responses: { '200': { $ref: '#/components/responses/ActionAccepted' }, '401': { $ref: '#/components/responses/Unauthorized' }, '500': { $ref: '#/components/responses/InternalError' } }
+  /api/v1/admin/shutdown:
+    post:
+      tags: [admin]
+      operationId: shutdownDaemon
+      summary: Request daemon shutdown
+      security: [{ adminBearer: [] }]
+      responses: { '200': { $ref: '#/components/responses/ActionAccepted' }, '401': { $ref: '#/components/responses/Unauthorized' }, '500': { $ref: '#/components/responses/InternalError' } }
+components:
+  securitySchemes:
+    deviceBearer: { type: http, scheme: bearer, description: Device token returned by pair exchange. }
+    adminBearer: { type: http, scheme: bearer, description: Admin token stored in the daemon state file. }
+  responses:
+    BadRequest:
+      description: Invalid request.
+      content: { text/plain: { schema: { type: string } } }
+    Unauthorized:
+      description: "Missing or invalid bearer token (also sets `WWW-Authenticate: Bearer`)."
+      content: { text/plain: { schema: { type: string, example: unauthorized } } }
+    NotFound:
+      description: File or directory not found.
+      content: { text/plain: { schema: { type: string } } }
+    TooLarge:
+      description: File exceeds the 25 MiB limit.
+      content: { text/plain: { schema: { type: string } } }
+    InternalError:
+      description: Internal operation failure.
+      content: { text/plain: { schema: { type: string } } }
+    ActionAccepted:
+      description: Action accepted.
+      content: { application/json: { schema: { $ref: '#/components/schemas/OK' } } }
+  schemas:
+    PairExchangeRequest:
+      type: object
+      required: [token]
+      additionalProperties: false
+      properties:
+        token: { type: string, minLength: 1, description: One-time pairing code. }
+        name: { type: string, description: Human-readable device name; defaults to `Mobile device`. }
+    PairExchangeResponse:
+      type: object
+      required: [device, server, token]
+      properties:
+        device: { $ref: '#/components/schemas/Device' }
+        server: { $ref: '#/components/schemas/Server' }
+        token: { type: string, description: Device bearer token; store it securely. }
+    Pairing:
+      type: object
+      required: [token, expiresAt]
+      properties:
+        token: { type: string }
+        expiresAt: { type: string, format: date-time }
+    Device:
+      type: object
+      required: [id, name, createdAt, lastSeen]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        createdAt: { type: string, format: date-time }
+        lastSeen: { type: string, format: date-time }
+        connected: { type: boolean }
+    Server:
+      type: object
+      required: [id, name]
+      properties: { id: { type: string }, name: { type: string } }
+    UploadResponse:
+      type: object
+      required: [path, image]
+      properties:
+        path: { type: string }
+        image: { type: boolean, description: Whether the upload is recognized as an image. }
+    DirectoryEntry:
+      type: object
+      required: [name, path]
+      properties: { name: { type: string }, path: { type: string } }
+    FileEntry:
+      type: object
+      required: [name, path, size]
+      properties: { name: { type: string }, path: { type: string }, size: { type: integer, format: int64 } }
+    DirectoryListing:
+      type: object
+      required: [path, parent, directories, files]
+      properties:
+        path: { type: string }
+        parent: { type: string }
+        directories: { type: array, items: { $ref: '#/components/schemas/DirectoryEntry' } }
+        files: { type: array, items: { $ref: '#/components/schemas/FileEntry' } }
+    ToolStatus:
+      type: object
+      required: [installed]
+      properties:
+        installed: { type: boolean }
+        path: { type: string }
+        version: { type: string }
+        error: { type: string }
+    RuntimeState:
+      type: object
+      required: [running, starting, stopping]
+      properties:
+        running: { type: boolean }
+        starting: { type: boolean }
+        stopping: { type: boolean }
+        startedAt: { type: string, format: date-time }
+        error: { type: string }
+    TunnelState:
+      allOf:
+        - $ref: '#/components/schemas/RuntimeState'
+        - type: object
+          properties: { external: { type: boolean }, url: { type: string, format: uri } }
+    EnvironmentSnapshot:
+      type: object
+      properties:
+        platform: { type: string }
+        architecture: { type: string }
+        checkedAt: { type: string, format: date-time }
+        node: { $ref: '#/components/schemas/ToolStatus' }
+        codex: { $ref: '#/components/schemas/ToolStatus' }
+        appServer: { $ref: '#/components/schemas/ToolStatus' }
+        cloudflared: { $ref: '#/components/schemas/ToolStatus' }
+    ControlStatus:
+      type: object
+      properties:
+        environment: { $ref: '#/components/schemas/EnvironmentSnapshot' }
+        appServer: { $ref: '#/components/schemas/RuntimeState' }
+        tunnel: { $ref: '#/components/schemas/TunnelState' }
+        controlAddr: { type: string, format: uri }
+        controlAddrs: { type: array, items: { type: string, format: uri } }
+        listenAddr: { type: string }
+        serverUuid: { type: string }
+        connectedClients: { type: integer, minimum: 0 }
+    WebSocketRequest:
+      type: object
+      required: [id, method]
+      properties:
+        id: { type: integer, format: int64, minimum: 1 }
+        method: { type: string }
+        params: { type: object, additionalProperties: true }
+    WebSocketResponse:
+      type: object
+      required: [id]
+      properties:
+        id: { type: integer, format: int64 }
+        result: {}
+        error: { $ref: '#/components/schemas/WebSocketError' }
+    WebSocketError:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+        statusCode: { type: integer }
+    WebSocketEvent:
+      type: object
+      required: [method, params]
+      properties:
+        id: { type: integer, format: int64 }
+        method: { type: string }
+        params: { type: object, additionalProperties: true }
+    OK:
+      type: object
+      required: [ok]
+      properties: { ok: { type: boolean, const: true } }
