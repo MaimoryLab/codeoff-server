@@ -67,13 +67,14 @@ func websocketHandler(server *Server, store *devices.Store, appServer AppServer,
 		disconnect := store.Connect(device.ID)
 		log.Printf("device connected: id=%s name=%q remote=%s", device.ID, device.Name, r.RemoteAddr)
 		defer func() {
+			store.ClearThreads(device.ID)
 			disconnect()
 			log.Printf("device disconnected: id=%s name=%q remote=%s", device.ID, device.Name, r.RemoteAddr)
 		}()
 
 		ctx, cancel := context.WithCancel(r.Context())
 		defer cancel()
-		session := &websocketSession{conn: conn, ctx: ctx, server: server, store: store, appServer: appServer}
+		session := &websocketSession{conn: conn, ctx: ctx, server: server, store: store, deviceID: device.ID, appServer: appServer}
 		var requests sync.WaitGroup
 		if events != nil {
 			eventStream, unsubscribe := events.subscribe()
@@ -106,6 +107,7 @@ type websocketSession struct {
 	ctx       context.Context
 	server    *Server
 	store     *devices.Store
+	deviceID  string
 	appServer AppServer
 }
 
@@ -204,6 +206,9 @@ func (s *websocketSession) dispatch(request websocketRequest) (any, int, error) 
 			return nil, http.StatusServiceUnavailable, errors.New("app-server is not running")
 		}
 		released, err := s.appServer.ReleaseThread(s.ctx, threadID)
+		if err == nil {
+			s.store.ReleaseThread(threadID)
+		}
 		return map[string]bool{"released": released}, statusFor(err, http.StatusBadGateway), err
 	case "thread/takeover":
 		threadID, err := requiredString(params, "threadId")
@@ -269,6 +274,7 @@ func (s *websocketSession) resumeThread(params map[string]any) (any, int, error)
 			return nil, http.StatusBadGateway, err
 		}
 	}
+	s.store.HoldThread(s.deviceID, threadID)
 	return value, http.StatusOK, nil
 }
 
@@ -284,6 +290,7 @@ func (s *websocketSession) takeOverThread(threadID string) (any, int, error) {
 	if err := json.Unmarshal(result, &value); err != nil {
 		return nil, http.StatusBadGateway, err
 	}
+	s.store.HoldThread(s.deviceID, threadID)
 	return value, http.StatusOK, nil
 }
 

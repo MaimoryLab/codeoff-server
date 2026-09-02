@@ -51,6 +51,15 @@ func TestPairExchangeAuthenticateAndRevoke(t *testing.T) {
 	if count := store.ConnectedCount(); count != 0 {
 		t.Fatalf("connected count = %d, want 0", count)
 	}
+	store.HoldThread(device.ID, "thread-1")
+	store.HoldThread(device.ID, "thread-2")
+	if count := store.List()[0].ThreadCount; count != 2 {
+		t.Fatalf("thread count = %d, want 2", count)
+	}
+	store.ReleaseThread("thread-1")
+	if count := store.List()[0].ThreadCount; count != 1 {
+		t.Fatalf("thread count after release = %d, want 1", count)
+	}
 	if err := store.Revoke(device.ID); err != nil {
 		t.Fatal(err)
 	}

@@ -7,6 +7,7 @@ export interface Device {
     "createdAt": string;
     "lastSeen": string;
     "connected"?: boolean;
+    "threadCount": number;
 }
 
 export interface Pairing {

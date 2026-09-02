@@ -19,11 +19,12 @@ import (
 var ErrInvalidPairingToken = errors.New("invalid or expired pairing token")
 
 type Device struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	CreatedAt time.Time `json:"createdAt"`
-	LastSeen  time.Time `json:"lastSeen"`
-	Connected bool      `json:"connected,omitempty"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	CreatedAt   time.Time `json:"createdAt"`
+	LastSeen    time.Time `json:"lastSeen"`
+	Connected   bool      `json:"connected,omitempty"`
+	ThreadCount int       `json:"threadCount"`
 }
 
 type Server struct {
@@ -49,6 +50,7 @@ type Store struct {
 	pairingEnd  time.Time
 	now         func() time.Time
 	connections map[string]int
+	threads     map[string]map[string]struct{}
 	server      Server
 }
 
@@ -58,7 +60,7 @@ type persisted struct {
 }
 
 func Open(path string) (*Store, error) {
-	store := &Store{path: path, now: time.Now, connections: make(map[string]int)}
+	store := &Store{path: path, now: time.Now, connections: make(map[string]int), threads: make(map[string]map[string]struct{})}
 	data, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return store.initServer()
@@ -207,8 +209,41 @@ func (s *Store) List() []Device {
 	for index := range s.devices {
 		result[index] = s.devices[index].Device
 		result[index].Connected = s.connections[result[index].ID] > 0
+		result[index].ThreadCount = len(s.threads[result[index].ID])
 	}
 	return result
+}
+
+func (s *Store) HoldThread(deviceID, threadID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.threads[deviceID] == nil {
+		s.threads[deviceID] = make(map[string]struct{})
+	}
+	s.threads[deviceID][threadID] = struct{}{}
+}
+
+func (s *Store) ReleaseThread(threadID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for deviceID, threads := range s.threads {
+		delete(threads, threadID)
+		if len(threads) == 0 {
+			delete(s.threads, deviceID)
+		}
+	}
+}
+
+func (s *Store) ClearThreads(deviceID string) {
+	s.mu.Lock()
+	delete(s.threads, deviceID)
+	s.mu.Unlock()
+}
+
+func (s *Store) ClearAllThreads() {
+	s.mu.Lock()
+	s.threads = make(map[string]map[string]struct{})
+	s.mu.Unlock()
 }
 
 func (s *Store) ConnectedCount() int {
@@ -251,6 +286,7 @@ func (s *Store) Revoke(id string) error {
 		return err
 	}
 	delete(s.connections, id)
+	delete(s.threads, id)
 	return nil
 }
 

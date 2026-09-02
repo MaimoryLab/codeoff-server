@@ -6,8 +6,6 @@ button { font: inherit; }
 .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; }
 .topbar { padding-bottom: 18px; }
 .topbar-actions { display: flex; gap: 8px; }
-.thread-management { display: grid; flex: none; gap: 4px; }
-.active-thread-count { color: #8d97a6; font-size: 11px; white-space: nowrap; }
 .eyebrow { margin: 0 0 6px; color: #7d8796; font-size: 11px; font-weight: 700; letter-spacing: 0; }
 h1, h2, p { margin-top: 0; }
 h1 { margin-bottom: 0; font-size: 28px; letter-spacing: 0; }
@@ -69,6 +67,7 @@ h2 { margin-bottom: 8px; font-size: 19px; }
 .device-list { display: grid; min-height: 0; flex: 1; gap: 10px; margin: 0; overflow-y: auto; padding: 0; list-style: none; }
 .device-list li { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #252a33; padding: 0 0 10px; font-size: 13px; }
 .device-list li > div { display: grid; gap: 5px; min-width: 0; }
+.device-conversations { color: #f2ce8c; font-size: 12px; }
 .device-state { display: flex; align-items: center; gap: 6px; color: #8d97a6; font-size: 11px; }
 .device-state::before { width: 7px; height: 7px; border-radius: 50%; background: #697383; content: ""; }
 .device-state.online { color: #83d39b; }

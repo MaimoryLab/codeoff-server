@@ -112,7 +112,6 @@ const releaseDialog = document.querySelector<HTMLDialogElement>("#release-dialog
 const releaseDialogStatus = document.querySelector<HTMLElement>("#release-dialog-status")!;
 const releaseThreadList = document.querySelector<HTMLElement>("#release-thread-list")!;
 const closeReleaseDialogButtons = document.querySelectorAll<HTMLButtonElement>("#close-release-dialog, #close-release-dialog-icon");
-const activeThreadCount = document.querySelector<HTMLElement>("#active-thread-count")!;
 const releaseConfirmDialog = document.querySelector<HTMLDialogElement>("#release-confirm-dialog")!;
 const releaseConfirmName = document.querySelector<HTMLElement>("#release-confirm-name")!;
 const closeReleaseConfirmButtons = document.querySelectorAll<HTMLButtonElement>("#cancel-release-confirm, #close-release-confirm-icon");
@@ -143,7 +142,6 @@ let lastSnapshot: Snapshot | null = null;
 let lastAppServerState: RuntimeState | null = null;
 let lastTunnelState: TunnelState | null = null;
 let releaseInFlight = false;
-let activeThreadTotal = 0;
 let pendingRelease: {thread: HeldThread; button: HTMLButtonElement} | null = null;
 
 type RuntimeState = {
@@ -157,7 +155,7 @@ type RuntimeState = {
 
 type TunnelState = { running: boolean; starting: boolean; stopping: boolean; external?: boolean; url?: string; error?: string };
 
-type Device = { id: string; name: string; createdAt: string; lastSeen: string; connected?: boolean };
+type Device = { id: string; name: string; createdAt: string; lastSeen: string; connected?: boolean; threadCount?: number };
 type HeldThread = { id: string; name: string; status: string };
 
 const tools: Record<string, HTMLElement> = {
@@ -210,7 +208,6 @@ function renderAppServer(state: RuntimeState, address = controlAddr) {
     toggleAppServerButton.textContent = state.running || state.starting ? t("stop") : t("start");
     toggleAppServerButton.disabled = state.starting || state.stopping;
     releaseConversationsButton.disabled = releaseInFlight;
-    renderActiveThreadCount(state.running ? activeThreadTotal : 0);
     void updatePairingDialog();
 }
 
@@ -288,7 +285,6 @@ async function refresh() {
         renderAppServer(overview.appServer);
         renderTunnel(overview.tunnel);
         await refreshDevices();
-        void refreshActiveThreadCount();
     } catch (error) {
         showToast(error instanceof Error ? error.message : t("unableToCheck"), true);
     } finally {
@@ -365,26 +361,7 @@ async function toggleAppServer() {
     }
 }
 
-function renderActiveThreadCount(count: number) {
-    activeThreadTotal = count;
-    activeThreadCount.textContent = t("activeThreads", {count: `${count}`});
-}
-
-async function refreshActiveThreadCount() {
-    if (!appServerRunning) {
-        renderActiveThreadCount(0);
-        return;
-    }
-    try {
-        const threads = (await AppService.HeldThreads()) ?? [];
-        renderActiveThreadCount(threads.length);
-    } catch {
-        // Keep the last known count while the app-server is changing state.
-    }
-}
-
 function renderHeldThreads(threads: HeldThread[]) {
-    renderActiveThreadCount(threads.length);
     releaseThreadList.replaceChildren();
     if (threads.length === 0) {
         const empty = document.createElement("p");
@@ -445,7 +422,6 @@ async function releaseThread(thread: HeldThread, button: HTMLButtonElement) {
     releaseDialogStatus.textContent = t("releasingThread");
     try {
         await AppService.ReleaseThread(thread.id);
-        void refreshActiveThreadCount();
         releaseDialog.close();
         showToast(t("threadReleased"));
     } catch (error) {
@@ -471,10 +447,13 @@ function renderDevices(devices: Device[]) {
         const info = document.createElement("div");
         const label = document.createElement("span");
         label.textContent = device.name;
+        const conversations = document.createElement("span");
+        conversations.className = "device-conversations";
+        conversations.textContent = t("activeThreads", {count: `${device.threadCount ?? 0}`});
         const status = document.createElement("span");
         status.className = `device-state ${device.connected ? "online" : "offline"}`;
         status.textContent = `${device.connected ? t("connected") : t("offline")} · ${new Date(device.lastSeen).toLocaleString()}`;
-        info.append(label, status);
+        info.append(label, conversations, status);
         const revoke = document.createElement("button");
         revoke.className = "mini-button";
         revoke.textContent = t("revoke");
@@ -720,5 +699,4 @@ void refreshDevices();
 window.setInterval(() => {
     void Promise.all([AppService.AppServerState(), AppService.TunnelState()]).then(([runtime, tunnel]) => { renderAppServer(runtime); renderTunnel(tunnel); }).catch(() => undefined);
     void refreshDevices();
-    void refreshActiveThreadCount();
 }, 5000);

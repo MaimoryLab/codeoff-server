@@ -247,11 +247,13 @@ func (s *AppService) SetCodexEnvironment(environment []string) (appserver.State,
 	if err := s.appServer.Stop(); err != nil {
 		return s.appServer.State(), err
 	}
+	s.devices.ClearAllThreads()
 	return s.startAppServer()
 }
 
 func (s *AppService) StopAppServer() (appserver.State, error) {
 	stopErr := s.appServer.Stop()
+	s.devices.ClearAllThreads()
 	awakeErr := s.keepAwake.Set(false)
 	settingsErr := s.updateSettings(func(settings *settings) { settings.AppServerEnabled = false })
 	return s.appServer.State(), errors.Join(stopErr, awakeErr, settingsErr)
@@ -266,7 +268,11 @@ func (s *AppService) HeldThreads() ([]appserver.HeldThread, error) {
 func (s *AppService) ReleaseThread(threadID string) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	return s.appServer.ReleaseThread(ctx, threadID)
+	released, err := s.appServer.ReleaseThread(ctx, threadID)
+	if err == nil {
+		s.devices.ReleaseThread(threadID)
+	}
+	return released, err
 }
 
 func (s *AppService) ToggleAppServer() (appserver.State, error) {
@@ -288,7 +294,9 @@ func (s *AppService) Shutdown() error {
 		controlErr = server.Close(ctx)
 		cancel()
 	}
-	return errors.Join(s.tunnel.Stop(), s.appServer.Stop(), s.keepAwake.Set(false), controlErr)
+	appErr := s.appServer.Stop()
+	s.devices.ClearAllThreads()
+	return errors.Join(s.tunnel.Stop(), appErr, s.keepAwake.Set(false), controlErr)
 }
 
 func (s *AppService) TunnelState() tunnel.State {

@@ -68,6 +68,33 @@ func TestApprovalResponseAcceptsZeroRequestID(t *testing.T) {
 	}
 }
 
+func TestWebSocketResumeTracksDeviceThread(t *testing.T) {
+	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pairing, err := store.NewPairing()
+	if err != nil {
+		t.Fatal(err)
+	}
+	device, _, err := store.Exchange(pairing.Token, "Phone")
+	if err != nil {
+		t.Fatal(err)
+	}
+	session := websocketSession{
+		ctx:       context.Background(),
+		store:     store,
+		deviceID:  device.ID,
+		appServer: new(fakeRemoteAppServer),
+	}
+	if _, status, err := session.resumeThread(map[string]any{"threadId": "thread-1"}); err != nil || status != http.StatusOK {
+		t.Fatalf("resume thread: status = %d, err = %v", status, err)
+	}
+	if count := store.List()[0].ThreadCount; count != 1 {
+		t.Fatalf("thread count = %d, want 1", count)
+	}
+}
+
 func TestStartUsesConfiguredAddress(t *testing.T) {
 	store, err := devices.Open(filepath.Join(t.TempDir(), "devices.json"))
 	if err != nil {
