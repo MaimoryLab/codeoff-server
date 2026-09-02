@@ -90,13 +90,13 @@ Release packages are the desktop app. For a Wails-free deployment, build the dae
 
 - Go `1.27+`
 - Node.js and pnpm
-- Wails 3 CLI `v3.0.0-beta.15`
+- Wails 3 CLI `v3.0.0-beta.16`
 - Installed `codex` binary and, optionally, `cloudflared` for remote access (the desktop panel can install supported dependencies after an explicit action)
 
 Install the pinned Wails CLI once:
 
 ```sh
-go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.15
+go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.16
 ```
 
 #### Run the desktop app
