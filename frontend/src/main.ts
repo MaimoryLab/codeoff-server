@@ -377,14 +377,14 @@ async function refreshActiveThreadCount() {
     }
     try {
         const threads = (await AppService.HeldThreads()) ?? [];
-        renderActiveThreadCount(threads.filter((thread) => thread.status === "active").length);
+        renderActiveThreadCount(threads.length);
     } catch {
         // Keep the last known count while the app-server is changing state.
     }
 }
 
 function renderHeldThreads(threads: HeldThread[]) {
-    renderActiveThreadCount(threads.filter((thread) => thread.status === "active").length);
+    renderActiveThreadCount(threads.length);
     releaseThreadList.replaceChildren();
     if (threads.length === 0) {
         const empty = document.createElement("p");
