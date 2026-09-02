@@ -257,8 +257,16 @@ func (s *AppService) StopAppServer() (appserver.State, error) {
 	return s.appServer.State(), errors.Join(stopErr, awakeErr, settingsErr)
 }
 
-func (s *AppService) InterruptActiveThreads() (int, error) {
-	return s.appServer.InterruptActiveThreads(context.Background())
+func (s *AppService) HeldThreads() ([]appserver.HeldThread, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	return s.appServer.HeldThreads(ctx)
+}
+
+func (s *AppService) ReleaseThread(threadID string) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	return s.appServer.ReleaseThread(ctx, threadID)
 }
 
 func (s *AppService) ToggleAppServer() (appserver.State, error) {

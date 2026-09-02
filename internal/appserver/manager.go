@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,6 +22,12 @@ type State struct {
 	CodexHome string    `json:"codexHome,omitempty"`
 	UserAgent string    `json:"userAgent,omitempty"`
 	Error     string    `json:"error,omitempty"`
+}
+
+type HeldThread struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Status string `json:"status"`
 }
 
 type startClient func(context.Context, string, []string, ...string) (*Client, error)
@@ -199,29 +206,16 @@ func (m *Manager) ReleaseThread(ctx context.Context, threadID string) (bool, err
 	return startErr == nil, errors.Join(stopErr, startErr)
 }
 
-func (m *Manager) InterruptActiveThreads(ctx context.Context) (int, error) {
+func (m *Manager) HeldThreads(ctx context.Context) ([]HeldThread, error) {
 	m.operationMu.Lock()
 	defer m.operationMu.Unlock()
 	m.mu.RLock()
 	client := m.client
 	m.mu.RUnlock()
 	if client == nil {
-		return 0, errors.New("app-server is not running")
+		return nil, errors.New("app-server is not running")
 	}
-	threadIDs, err := activeThreadIDs(ctx, client)
-	if err != nil {
-		return 0, err
-	}
-	var interruptErrs []error
-	interrupted := 0
-	for _, threadID := range threadIDs {
-		if err := client.Call(ctx, "turn/interrupt", map[string]string{"threadId": threadID}, nil); err != nil {
-			interruptErrs = append(interruptErrs, fmt.Errorf("interrupt thread %s: %w", threadID, err))
-			continue
-		}
-		interrupted++
-	}
-	return interrupted, errors.Join(interruptErrs...)
+	return heldThreads(ctx, client)
 }
 
 func (m *Manager) TakeOverThread(ctx context.Context, threadID string) (json.RawMessage, error) {
@@ -286,13 +280,44 @@ func isWriterConflict(err error) bool {
 }
 
 func hasActiveThreads(ctx context.Context, client *Client) (bool, error) {
-	threadIDs, err := activeThreadIDs(ctx, client)
-	return len(threadIDs) > 0, err
+	var cursor string
+	for {
+		var loaded struct {
+			Data       []string `json:"data"`
+			NextCursor string   `json:"nextCursor"`
+		}
+		params := map[string]string{}
+		if cursor != "" {
+			params["cursor"] = cursor
+		}
+		if err := client.Call(ctx, "thread/loaded/list", params, &loaded); err != nil {
+			return false, err
+		}
+		for _, id := range loaded.Data {
+			var result struct {
+				Thread struct {
+					Status struct {
+						Type string `json:"type"`
+					} `json:"status"`
+				} `json:"thread"`
+			}
+			if err := client.Call(ctx, "thread/read", map[string]any{"threadId": id, "includeTurns": false}, &result); err != nil {
+				return false, err
+			}
+			if result.Thread.Status.Type == "active" {
+				return true, nil
+			}
+		}
+		if loaded.NextCursor == "" || loaded.NextCursor == cursor {
+			return false, nil
+		}
+		cursor = loaded.NextCursor
+	}
 }
 
-func activeThreadIDs(ctx context.Context, client *Client) ([]string, error) {
+func heldThreads(ctx context.Context, client *Client) ([]HeldThread, error) {
 	var cursor string
-	var active []string
+	var threads []HeldThread
 	for {
 		var loaded struct {
 			Data       []string `json:"data"`
@@ -308,7 +333,12 @@ func activeThreadIDs(ctx context.Context, client *Client) ([]string, error) {
 		for _, id := range loaded.Data {
 			var result struct {
 				Thread struct {
-					Status struct {
+					ID          string `json:"id"`
+					Name        string `json:"name"`
+					SessionName string `json:"sessionName"`
+					Title       string `json:"title"`
+					Preview     string `json:"preview"`
+					Status      struct {
 						Type string `json:"type"`
 					} `json:"status"`
 				} `json:"thread"`
@@ -316,12 +346,17 @@ func activeThreadIDs(ctx context.Context, client *Client) ([]string, error) {
 			if err := client.Call(ctx, "thread/read", map[string]any{"threadId": id, "includeTurns": false}, &result); err != nil {
 				return nil, err
 			}
-			if result.Thread.Status.Type == "active" {
-				active = append(active, id)
+			name := id
+			for _, candidate := range []string{result.Thread.Name, result.Thread.SessionName, result.Thread.Title, result.Thread.Preview} {
+				if value := strings.TrimSpace(candidate); value != "" {
+					name = value
+					break
+				}
 			}
+			threads = append(threads, HeldThread{ID: id, Name: name, Status: result.Thread.Status.Type})
 		}
 		if loaded.NextCursor == "" || loaded.NextCursor == cursor {
-			return active, nil
+			return threads, nil
 		}
 		cursor = loaded.NextCursor
 	}

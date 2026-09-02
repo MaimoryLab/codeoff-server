@@ -34,6 +34,10 @@ export function Devices(): $CancellablePromise<devices$0.Device[] | null> {
     return $Call.ByID(4144524189);
 }
 
+export function HeldThreads(): $CancellablePromise<appserver$0.HeldThread[] | null> {
+    return $Call.ByID(323898866);
+}
+
 export function InstallCloudflared(): $CancellablePromise<diagnostics$0.Snapshot> {
     return $Call.ByID(762362506);
 }
@@ -50,10 +54,6 @@ export function InstallProgress(): $CancellablePromise<string> {
     return $Call.ByID(962318050);
 }
 
-export function InterruptActiveThreads(): $CancellablePromise<number> {
-    return $Call.ByID(3036150124);
-}
-
 export function NewPairing(): $CancellablePromise<devices$0.Pairing> {
     return $Call.ByID(141680464);
 }
@@ -68,6 +68,10 @@ export function PairingActive(): $CancellablePromise<boolean> {
 
 export function RefreshStatus(): $CancellablePromise<diagnostics$0.Snapshot> {
     return $Call.ByID(1963326979);
+}
+
+export function ReleaseThread(threadID: string): $CancellablePromise<boolean> {
+    return $Call.ByID(694330339, threadID);
 }
 
 export function RevokeDevice(id: string): $CancellablePromise<void> {
