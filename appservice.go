@@ -257,6 +257,10 @@ func (s *AppService) StopAppServer() (appserver.State, error) {
 	return s.appServer.State(), errors.Join(stopErr, awakeErr, settingsErr)
 }
 
+func (s *AppService) InterruptActiveThreads() (int, error) {
+	return s.appServer.InterruptActiveThreads(context.Background())
+}
+
 func (s *AppService) ToggleAppServer() (appserver.State, error) {
 	if state := s.appServer.State(); state.Running || state.Starting {
 		return s.StopAppServer()

@@ -50,6 +50,10 @@ export function InstallProgress(): $CancellablePromise<string> {
     return $Call.ByID(962318050);
 }
 
+export function InterruptActiveThreads(): $CancellablePromise<number> {
+    return $Call.ByID(3036150124);
+}
+
 export function NewPairing(): $CancellablePromise<devices$0.Pairing> {
     return $Call.ByID(141680464);
 }
