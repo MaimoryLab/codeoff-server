@@ -89,6 +89,10 @@ func TestManagerReleaseThread(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			event := <-manager.Events()
+			if event.Method != "thread/released" || string(event.Params) != `{"threadId":"thread-42"}` {
+				t.Fatalf("release event = %#v", event)
+			}
 			if released != (status == "idle") {
 				t.Fatalf("released = %t", released)
 			}

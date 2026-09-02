@@ -5,7 +5,10 @@ button { font: inherit; }
 .shell { width: min(920px, calc(100% - 48px)); margin: 0 auto; padding: 20px 0 8px; }
 .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; }
 .topbar { padding-bottom: 18px; }
+.topbar-leading { display: flex; align-items: flex-start; gap: 20px; min-width: 0; }
 .topbar-actions { display: flex; gap: 8px; }
+.thread-management { display: grid; flex: none; gap: 4px; }
+.active-thread-count { color: #8d97a6; font-size: 11px; white-space: nowrap; }
 .eyebrow { margin: 0 0 6px; color: #7d8796; font-size: 11px; font-weight: 700; letter-spacing: 0; }
 h1, h2, p { margin-top: 0; }
 h1 { margin-bottom: 0; font-size: 28px; letter-spacing: 0; }
@@ -86,6 +89,8 @@ h2 { margin-bottom: 8px; font-size: 19px; }
 .pairing-field button[hidden] { display: none; }
 .dialog-done { width: 100%; margin-top: 16px; }
 .release-dialog { width: min(560px, calc(100% - 32px)); }
+.release-confirm-dialog { width: min(440px, calc(100% - 32px)); }
+.release-confirm-name { margin: 16px 0 8px; overflow-wrap: anywhere; font-weight: 700; }
 .release-thread-list { display: grid; max-height: min(50vh, 360px); margin-top: 16px; overflow-y: auto; }
 .release-thread-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; border-top: 1px solid #252a33; }
 .release-thread-info { display: grid; min-width: 0; gap: 5px; }

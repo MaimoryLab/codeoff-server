@@ -7,15 +7,15 @@ type Language = "en" | "zh";
 
 const translations: Record<Language, Record<string, string>> = {
     en: {
-        localControl: "LOCAL CONTROL", connect: "Connect", releaseConversations: "Release conversations", refresh: "Refresh", copy: "Copy",
+        localControl: "LOCAL CONTROL", connect: "Connect", manageConversations: "Manage conversations", activeThreads: "{count} active conversations", refresh: "Refresh", copy: "Copy",
         runtime: "RUNTIME", appServer: "Codex app-server", remoteAccess: "REMOTE ACCESS", tunnel: "Tunnel", devices: "DEVICES", boundDevices: "Bound devices", bindDevice: "Bind new device", noDevices: "No devices bound", environment: "ENVIRONMENT", environmentStatus: "Environment status", localTools: "Local tools", checking: "Checking", install: "Install", saveRestart: "Save & restart", listenAddress: "Listen address", port: "Port",
-        configure: "Configure", cancel: "Cancel", codexEnvironment: "Codex environment", environmentVariables: "Environment variables", codexEnvironmentSaved: "Codex environment saved", unableLoadCodexEnvironment: "Unable to load Codex environment", unableSaveCodexEnvironment: "Unable to save Codex environment",
+        configure: "Configure", cancel: "Cancel", confirmReleaseThread: "Release conversation?", releaseWarning: "Releasing this conversation will pause all work.", codexEnvironment: "Codex environment", environmentVariables: "Environment variables", codexEnvironmentSaved: "Codex environment saved", unableLoadCodexEnvironment: "Unable to load Codex environment", unableSaveCodexEnvironment: "Unable to save Codex environment",
         installed: "Installed", notInstalled: "Not installed", upgrade: "Upgrade", start: "Start", stop: "Stop", close: "Close", save: "Save", checked: "Checked {value}", starting: "Starting", stopping: "Stopping", running: "Running", offline: "Offline", stopped: "Stopped", configured: "Configured", online: "Online", localControlEndpoint: "Local control endpoint", remoteAccessEnabled: "Remote access enabled", externalTunnelConfigured: "Using configured custom domain", customDomain: "Custom domain", customDomainURL: "Custom domain address", customDomainHelp: "How to configure: listen on the local bound address yourself, forward this domain to it, and manage that service's status.", installCloudflared: "Install Cloudflared to enable remote access", installCloudflaredFirst: "Install Cloudflared first", expires: "Expires {value}", pairDevice: "Pair device", connectDevice: "Connect device", pairingCode: "Pairing code", tunnelAddress: "Tunnel address", tunnelMode: "Tunnel mode", quickTunnel: "Quick Tunnel (recommended)", existingTunnel: "Custom domain", existingTunnelURL: "Custom domain address", saveTunnel: "Save tunnel settings", tunnelSettingsSaved: "Tunnel settings saved", connected: "Connected", revoke: "Revoke", copied: "{label} copied", unableToCopy: "Unable to copy {label}", connectionChecking: "Checking local environment...", unableToCheck: "Unable to check environment", startingTunnel: "Starting tunnel...", stoppingTunnel: "Stopping tunnel...", tunnelOnline: "Tunnel is online", tunnelStopped: "Tunnel stopped", unableChangeTunnel: "Unable to change tunnel state", unableSaveTunnel: "Unable to save tunnel settings", startingAppServer: "Starting app-server...", stoppingAppServer: "Stopping app-server...", appServerRunning: "App-server is running", appServerStopped: "App-server stopped", unableChangeAppServer: "Unable to change app-server state", unableLoadDevices: "Unable to load devices", unableCreatePairing: "Unable to create pairing code", restartingServer: "Restarting local server...", serverRestarted: "Local server restarted", unableUpdateListen: "Unable to update listen address", unableRevoke: "Unable to revoke device", installing: "Installing {label}...", upgrading: "Upgrading {label}...", installationFailed: "Installation failed"
     },
     zh: {
-        localControl: "本地控制", connect: "连接", releaseConversations: "释放对话", refresh: "刷新", copy: "复制",
+        localControl: "本地控制", connect: "连接", manageConversations: "管理对话", activeThreads: "{count}个活跃对话", refresh: "刷新", copy: "复制",
         runtime: "运行时", appServer: "Codex 应用服务", remoteAccess: "远程访问", tunnel: "隧道", devices: "设备", boundDevices: "已绑定设备", bindDevice: "绑定新设备", noDevices: "暂无绑定设备", environment: "环境", environmentStatus: "环境状态", localTools: "本地工具", checking: "检查中", install: "安装", saveRestart: "保存并重启", listenAddress: "监听地址", port: "端口",
-        configure: "配置", cancel: "取消", codexEnvironment: "Codex 运行环境", environmentVariables: "环境变量", codexEnvironmentSaved: "Codex 环境变量已保存", unableLoadCodexEnvironment: "无法加载 Codex 环境变量", unableSaveCodexEnvironment: "无法保存 Codex 环境变量",
+        configure: "配置", cancel: "取消", confirmReleaseThread: "释放对话？", releaseWarning: "释放此对话后，所有工作都会暂停。", codexEnvironment: "Codex 运行环境", environmentVariables: "环境变量", codexEnvironmentSaved: "Codex 环境变量已保存", unableLoadCodexEnvironment: "无法加载 Codex 环境变量", unableSaveCodexEnvironment: "无法保存 Codex 环境变量",
         installed: "已安装", notInstalled: "未安装", upgrade: "升级", start: "启动", stop: "停止", close: "关闭", save: "保存", checked: "检查于 {value}", starting: "启动中", stopping: "停止中", running: "运行中", offline: "离线", stopped: "已停止", configured: "已配置", online: "在线", localControlEndpoint: "本地控制端点", remoteAccessEnabled: "已启用远程访问", externalTunnelConfigured: "使用已配置的自定义域名", customDomain: "自定义域名", customDomainURL: "自定义域名地址", customDomainHelp: "如何配置：请自行监听本地绑定地址，将此域名转发到该地址，并自行管理该服务状态。", installCloudflared: "安装 Cloudflared 以启用远程访问", installCloudflaredFirst: "请先安装 Cloudflared", expires: "过期时间 {value}", pairDevice: "配对设备", connectDevice: "连接设备", pairingCode: "配对码", tunnelAddress: "隧道地址", tunnelMode: "隧道模式", quickTunnel: "Quick Tunnel（推荐）", existingTunnel: "自定义域名", existingTunnelURL: "自定义域名地址", saveTunnel: "保存隧道设置", tunnelSettingsSaved: "隧道设置已保存", invalidTunnelURL: "请输入不带路径的 http(s) 地址", connected: "已连接", revoke: "撤销", copied: "已复制{label}", connectionChecking: "正在检查本地环境...", unableToCheck: "无法检查环境", startingTunnel: "正在启动隧道...", stoppingTunnel: "正在停止隧道...", tunnelOnline: "隧道已上线", tunnelStopped: "隧道已停止", unableChangeTunnel: "无法更改隧道状态", unableSaveTunnel: "无法保存隧道设置", startingAppServer: "正在启动应用服务...", stoppingAppServer: "正在停止应用服务...", appServerRunning: "应用服务运行中", appServerStopped: "应用服务已停止", unableChangeAppServer: "无法更改应用服务状态", unableLoadDevices: "无法加载设备", unableCreatePairing: "无法创建配对码", restartingServer: "正在重启本地服务...", serverRestarted: "本地服务已重启", unableUpdateListen: "无法更新监听地址", unableRevoke: "无法撤销设备", installing: "正在安装 {label}...", upgrading: "正在升级 {label}...", installationFailed: "安装失败"
     }
 };
@@ -112,6 +112,11 @@ const releaseDialog = document.querySelector<HTMLDialogElement>("#release-dialog
 const releaseDialogStatus = document.querySelector<HTMLElement>("#release-dialog-status")!;
 const releaseThreadList = document.querySelector<HTMLElement>("#release-thread-list")!;
 const closeReleaseDialogButtons = document.querySelectorAll<HTMLButtonElement>("#close-release-dialog, #close-release-dialog-icon");
+const activeThreadCount = document.querySelector<HTMLElement>("#active-thread-count")!;
+const releaseConfirmDialog = document.querySelector<HTMLDialogElement>("#release-confirm-dialog")!;
+const releaseConfirmName = document.querySelector<HTMLElement>("#release-confirm-name")!;
+const closeReleaseConfirmButtons = document.querySelectorAll<HTMLButtonElement>("#cancel-release-confirm, #close-release-confirm-icon");
+const confirmReleaseButton = document.querySelector<HTMLButtonElement>("#confirm-release")!;
 const codexEnvironmentDialog = document.querySelector<HTMLDialogElement>("#codex-env-dialog")!;
 const codexEnvironmentInput = document.querySelector<HTMLTextAreaElement>("#codex-environment")!;
 const saveCodexEnvironmentButton = document.querySelector<HTMLButtonElement>("#save-codex-env")!;
@@ -138,6 +143,8 @@ let lastSnapshot: Snapshot | null = null;
 let lastAppServerState: RuntimeState | null = null;
 let lastTunnelState: TunnelState | null = null;
 let releaseInFlight = false;
+let activeThreadTotal = 0;
+let pendingRelease: {thread: HeldThread; button: HTMLButtonElement} | null = null;
 
 type RuntimeState = {
     running: boolean;
@@ -203,6 +210,7 @@ function renderAppServer(state: RuntimeState, address = controlAddr) {
     toggleAppServerButton.textContent = state.running || state.starting ? t("stop") : t("start");
     toggleAppServerButton.disabled = state.starting || state.stopping;
     releaseConversationsButton.disabled = releaseInFlight;
+    renderActiveThreadCount(state.running ? activeThreadTotal : 0);
     void updatePairingDialog();
 }
 
@@ -280,6 +288,7 @@ async function refresh() {
         renderAppServer(overview.appServer);
         renderTunnel(overview.tunnel);
         await refreshDevices();
+        void refreshActiveThreadCount();
     } catch (error) {
         showToast(error instanceof Error ? error.message : t("unableToCheck"), true);
     } finally {
@@ -356,7 +365,26 @@ async function toggleAppServer() {
     }
 }
 
+function renderActiveThreadCount(count: number) {
+    activeThreadTotal = count;
+    activeThreadCount.textContent = t("activeThreads", {count: `${count}`});
+}
+
+async function refreshActiveThreadCount() {
+    if (!appServerRunning) {
+        renderActiveThreadCount(0);
+        return;
+    }
+    try {
+        const threads = (await AppService.HeldThreads()) ?? [];
+        renderActiveThreadCount(threads.filter((thread) => thread.status === "active").length);
+    } catch {
+        // Keep the last known count while the app-server is changing state.
+    }
+}
+
 function renderHeldThreads(threads: HeldThread[]) {
+    renderActiveThreadCount(threads.filter((thread) => thread.status === "active").length);
     releaseThreadList.replaceChildren();
     if (threads.length === 0) {
         const empty = document.createElement("p");
@@ -381,10 +409,17 @@ function renderHeldThreads(threads: HeldThread[]) {
         button.className = "mini-button";
         button.type = "button";
         button.textContent = t("releaseThread");
-        button.addEventListener("click", () => void releaseThread(thread, button));
+        button.addEventListener("click", () => requestReleaseThread(thread, button));
         row.append(info, button);
         releaseThreadList.append(row);
     }
+}
+
+function requestReleaseThread(thread: HeldThread, button: HTMLButtonElement) {
+    if (releaseInFlight) return;
+    pendingRelease = {thread, button};
+    releaseConfirmName.textContent = thread.name || thread.id;
+    releaseConfirmDialog.showModal();
 }
 
 async function showReleaseDialog() {
@@ -410,6 +445,7 @@ async function releaseThread(thread: HeldThread, button: HTMLButtonElement) {
     releaseDialogStatus.textContent = t("releasingThread");
     try {
         await AppService.ReleaseThread(thread.id);
+        void refreshActiveThreadCount();
         releaseDialog.close();
         showToast(t("threadReleased"));
     } catch (error) {
@@ -611,6 +647,16 @@ async function install(kind: "node" | "codex" | "cloudflared") {
 refreshButton.addEventListener("click", refresh);
 connectButton.addEventListener("click", () => void showConnectionDialog());
 releaseConversationsButton.addEventListener("click", () => void showReleaseDialog());
+confirmReleaseButton.addEventListener("click", () => {
+    const pending = pendingRelease;
+    pendingRelease = null;
+    releaseConfirmDialog.close();
+    if (pending) void releaseThread(pending.thread, pending.button);
+});
+closeReleaseConfirmButtons.forEach((button) => button.addEventListener("click", () => {
+    pendingRelease = null;
+    releaseConfirmDialog.close();
+}));
 installNodeButton.addEventListener("click", () => void install("node"));
 configureCodexButton.addEventListener("click", () => void showCodexEnvironment());
 installCodexButton.addEventListener("click", () => void install("codex"));
@@ -663,6 +709,7 @@ closeReleaseDialogButtons.forEach((button) => button.addEventListener("click", (
 closeCodexEnvironmentButtons.forEach((button) => button.addEventListener("click", () => codexEnvironmentDialog.close()));
 saveCodexEnvironmentButton.addEventListener("click", () => void saveCodexEnvironment());
 pairingDialog.addEventListener("close", () => { pairingDialogMode = ""; });
+releaseConfirmDialog.addEventListener("close", () => { pendingRelease = null; });
 copyMessageButton.addEventListener("click", () => void copyText(messageText.textContent ?? "", "Error"));
 copyAppServerButton.addEventListener("click", () => void copyText(controlAddr, "Local address"));
 copyTunnelButton.addEventListener("click", () => void copyText(tunnelURL, t("tunnelAddress")));
@@ -673,4 +720,5 @@ void refreshDevices();
 window.setInterval(() => {
     void Promise.all([AppService.AppServerState(), AppService.TunnelState()]).then(([runtime, tunnel]) => { renderAppServer(runtime); renderTunnel(tunnel); }).catch(() => undefined);
     void refreshDevices();
+    void refreshActiveThreadCount();
 }, 5000);

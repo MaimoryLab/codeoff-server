@@ -197,6 +197,11 @@ func (m *Manager) ReleaseThread(ctx context.Context, threadID string) (bool, err
 	if err := client.Call(ctx, "thread/unsubscribe", map[string]string{"threadId": threadID}, nil); err != nil {
 		return false, err
 	}
+	params, _ := json.Marshal(map[string]string{"threadId": threadID})
+	select {
+	case m.events <- Event{Method: "thread/released", Params: params}:
+	default:
+	}
 	active, err := hasActiveThreads(ctx, client)
 	if err != nil || active {
 		return false, err
