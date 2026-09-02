@@ -23,14 +23,14 @@ const translations: Record<Language, Record<string, string>> = {
 translations.en.loadingReleaseThreads = "Loading conversations...";
 translations.en.noHeldThreads = "No conversations are held by Codeoff";
 translations.en.releaseThread = "Release";
-translations.en.confirmReleaseThread = "Release {name}?";
+translations.en.releasingThread = "Releasing conversation...";
 translations.en.threadReleased = "Conversation released";
 translations.en.unableLoadHeldThreads = "Unable to load held conversations";
 translations.en.unableReleaseThread = "Unable to release conversation";
 translations.zh.loadingReleaseThreads = "正在加载对话...";
 translations.zh.noHeldThreads = "Codeoff 当前没有持有对话";
 translations.zh.releaseThread = "释放";
-translations.zh.confirmReleaseThread = "确定要释放“{name}”吗？";
+translations.zh.releasingThread = "正在释放对话...";
 translations.zh.threadReleased = "对话已释放";
 translations.zh.unableLoadHeldThreads = "无法加载持有的对话";
 translations.zh.unableReleaseThread = "无法释放对话";
@@ -405,10 +405,9 @@ async function showReleaseDialog() {
 }
 
 async function releaseThread(thread: HeldThread, button: HTMLButtonElement) {
-    const name = thread.name || thread.id;
-    if (!window.confirm(t("confirmReleaseThread", {name}))) return;
     releaseInFlight = true;
     button.disabled = true;
+    releaseDialogStatus.textContent = t("releasingThread");
     try {
         await AppService.ReleaseThread(thread.id);
         releaseDialog.close();
