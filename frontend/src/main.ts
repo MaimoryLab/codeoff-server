@@ -8,13 +8,13 @@ type Language = "en" | "zh";
 const translations: Record<Language, Record<string, string>> = {
     en: {
         localControl: "LOCAL CONTROL", connect: "Connect", manageConversations: "Manage conversations", activeThreads: "{count} active conversations", refresh: "Refresh", copy: "Copy",
-        runtime: "RUNTIME", appServer: "Codex app-server", remoteAccess: "REMOTE ACCESS", tunnel: "Tunnel", devices: "DEVICES", boundDevices: "Bound devices", bindDevice: "Bind new device", noDevices: "No devices bound", environment: "ENVIRONMENT", environmentStatus: "Environment status", localTools: "Local tools", checking: "Checking", install: "Install", saveRestart: "Save & restart", listenAddress: "Listen address", port: "Port",
+        runtime: "RUNTIME", appServer: "Codex app-server", remoteAccess: "REMOTE ACCESS", tunnel: "Tunnel", devices: "DEVICES", boundDevices: "Bound devices", bindDevice: "Bind new device", noDevices: "No devices bound", environment: "ENVIRONMENT", environmentStatus: "Environment status", localTools: "Local tools", checking: "Checking", install: "Install", saveRestart: "Save & restart", listenAddress: "Listen address", localListen: "Local", lanListen: "LAN", listenAddressHelp: "Local listens on 127.0.0.1 for development and CF Tunnel-only access; LAN listens on 0.0.0.0 (all addresses) for access from your local network.", port: "Port",
         configure: "Configure", cancel: "Cancel", confirmReleaseThread: "Release conversation?", releaseWarning: "Releasing this conversation will pause all work.", codexEnvironment: "Codex environment", environmentVariables: "Environment variables", codexEnvironmentSaved: "Codex environment saved", unableLoadCodexEnvironment: "Unable to load Codex environment", unableSaveCodexEnvironment: "Unable to save Codex environment",
         installed: "Installed", notInstalled: "Not installed", upgrade: "Upgrade", start: "Start", stop: "Stop", close: "Close", save: "Save", checked: "Checked {value}", starting: "Starting", stopping: "Stopping", running: "Running", offline: "Offline", stopped: "Stopped", configured: "Configured", online: "Online", localControlEndpoint: "Local control endpoint", remoteAccessEnabled: "Remote access enabled", externalTunnelConfigured: "Using configured custom domain", customDomain: "Custom domain", customDomainURL: "Custom domain address", customDomainHelp: "How to configure: listen on the local bound address yourself, forward this domain to it, and manage that service's status.", installCloudflared: "Install Cloudflared to enable remote access", installCloudflaredFirst: "Install Cloudflared first", expires: "Expires {value}", pairDevice: "Pair device", connectDevice: "Connect device", pairingCode: "Pairing code", tunnelAddress: "Tunnel address", tunnelMode: "Tunnel mode", quickTunnel: "Quick Tunnel (recommended)", existingTunnel: "Custom domain", existingTunnelURL: "Custom domain address", saveTunnel: "Save tunnel settings", tunnelSettingsSaved: "Tunnel settings saved", connected: "Connected", revoke: "Revoke", copied: "{label} copied", unableToCopy: "Unable to copy {label}", connectionChecking: "Checking local environment...", unableToCheck: "Unable to check environment", startingTunnel: "Starting tunnel...", stoppingTunnel: "Stopping tunnel...", tunnelOnline: "Tunnel is online", tunnelStopped: "Tunnel stopped", unableChangeTunnel: "Unable to change tunnel state", unableSaveTunnel: "Unable to save tunnel settings", startingAppServer: "Starting app-server...", stoppingAppServer: "Stopping app-server...", appServerRunning: "App-server is running", appServerStopped: "App-server stopped", unableChangeAppServer: "Unable to change app-server state", unableLoadDevices: "Unable to load devices", unableCreatePairing: "Unable to create pairing code", restartingServer: "Restarting local server...", serverRestarted: "Local server restarted", unableUpdateListen: "Unable to update listen address", unableRevoke: "Unable to revoke device", installing: "Installing {label}...", upgrading: "Upgrading {label}...", installationFailed: "Installation failed"
     },
     zh: {
         localControl: "本地控制", connect: "连接", manageConversations: "管理对话", activeThreads: "{count}个活跃对话", refresh: "刷新", copy: "复制",
-        runtime: "运行时", appServer: "Codex 应用服务", remoteAccess: "远程访问", tunnel: "隧道", devices: "设备", boundDevices: "已绑定设备", bindDevice: "绑定新设备", noDevices: "暂无绑定设备", environment: "环境", environmentStatus: "环境状态", localTools: "本地工具", checking: "检查中", install: "安装", saveRestart: "保存并重启", listenAddress: "监听地址", port: "端口",
+        runtime: "运行时", appServer: "Codex 应用服务", remoteAccess: "远程访问", tunnel: "隧道", devices: "设备", boundDevices: "已绑定设备", bindDevice: "绑定新设备", noDevices: "暂无绑定设备", environment: "环境", environmentStatus: "环境状态", localTools: "本地工具", checking: "检查中", install: "安装", saveRestart: "保存并重启", listenAddress: "监听地址", localListen: "本地", lanListen: "局域网", listenAddressHelp: "本地监听 127.0.0.1，用于开发和仅通过 CF Tunnel 访问；局域网监听 0.0.0.0（所有地址），适用于局域网访问。", port: "端口",
         configure: "配置", cancel: "取消", confirmReleaseThread: "释放对话？", releaseWarning: "释放此对话后，所有工作都会暂停。", codexEnvironment: "Codex 运行环境", environmentVariables: "环境变量", codexEnvironmentSaved: "Codex 环境变量已保存", unableLoadCodexEnvironment: "无法加载 Codex 环境变量", unableSaveCodexEnvironment: "无法保存 Codex 环境变量",
         installed: "已安装", notInstalled: "未安装", upgrade: "升级", start: "启动", stop: "停止", close: "关闭", save: "保存", checked: "检查于 {value}", starting: "启动中", stopping: "停止中", running: "运行中", offline: "离线", stopped: "已停止", configured: "已配置", online: "在线", localControlEndpoint: "本地控制端点", remoteAccessEnabled: "已启用远程访问", externalTunnelConfigured: "使用已配置的自定义域名", customDomain: "自定义域名", customDomainURL: "自定义域名地址", customDomainHelp: "如何配置：请自行监听本地绑定地址，将此域名转发到该地址，并自行管理该服务状态。", installCloudflared: "安装 Cloudflared 以启用远程访问", installCloudflaredFirst: "请先安装 Cloudflared", expires: "过期时间 {value}", pairDevice: "配对设备", connectDevice: "连接设备", pairingCode: "配对码", tunnelAddress: "隧道地址", tunnelMode: "隧道模式", quickTunnel: "Quick Tunnel（推荐）", existingTunnel: "自定义域名", existingTunnelURL: "自定义域名地址", saveTunnel: "保存隧道设置", tunnelSettingsSaved: "隧道设置已保存", invalidTunnelURL: "请输入不带路径的 http(s) 地址", connected: "已连接", revoke: "撤销", copied: "已复制{label}", connectionChecking: "正在检查本地环境...", unableToCheck: "无法检查环境", startingTunnel: "正在启动隧道...", stoppingTunnel: "正在停止隧道...", tunnelOnline: "隧道已上线", tunnelStopped: "隧道已停止", unableChangeTunnel: "无法更改隧道状态", unableSaveTunnel: "无法保存隧道设置", startingAppServer: "正在启动应用服务...", stoppingAppServer: "正在停止应用服务...", appServerRunning: "应用服务运行中", appServerStopped: "应用服务已停止", unableChangeAppServer: "无法更改应用服务状态", unableLoadDevices: "无法加载设备", unableCreatePairing: "无法创建配对码", restartingServer: "正在重启本地服务...", serverRestarted: "本地服务已重启", unableUpdateListen: "无法更新监听地址", unableRevoke: "无法撤销设备", installing: "正在安装 {label}...", upgrading: "正在升级 {label}...", installationFailed: "安装失败"
     }
@@ -77,7 +77,8 @@ const appServerState = document.querySelector<HTMLElement>("#app-server-state")!
 const appServerDetail = document.querySelector<HTMLElement>("#app-server-detail")!;
 const appServerAddress = document.querySelector<HTMLElement>("#app-server-address")!;
 const copyAppServerButton = document.querySelector<HTMLButtonElement>("#copy-app-server")!;
-const listenHost = document.querySelector<HTMLInputElement>("#listen-host")!;
+const listenHostLocalButton = document.querySelector<HTMLButtonElement>("#listen-host-local")!;
+const listenHostLANButton = document.querySelector<HTMLButtonElement>("#listen-host-lan")!;
 const listenPort = document.querySelector<HTMLInputElement>("#listen-port")!;
 const saveListenButton = document.querySelector<HTMLButtonElement>("#save-listen")!;
 const toggleAppServerButton = document.querySelector<HTMLButtonElement>("#toggle-app-server")!;
@@ -89,8 +90,7 @@ const tunnelModeQuickButton = document.querySelector<HTMLButtonElement>("#tunnel
 const tunnelModeExternalButton = document.querySelector<HTMLButtonElement>("#tunnel-mode-external")!;
 const tunnelURLField = document.querySelector<HTMLElement>("#tunnel-url-field")!;
 const tunnelURLInput = document.querySelector<HTMLInputElement>("#tunnel-url")!;
-const customDomainHelp = document.querySelector<HTMLElement>("#custom-domain-help")!;
-const customDomainHelpTooltip = customDomainHelp.querySelector<HTMLElement>(".hint-tooltip")!;
+const hints = document.querySelectorAll<HTMLElement>(".hint-icon");
 const copyTunnelButton = document.querySelector<HTMLButtonElement>("#copy-tunnel")!;
 const toggleTunnelButton = document.querySelector<HTMLButtonElement>("#toggle-tunnel")!;
 const bindDeviceButton = document.querySelector<HTMLButtonElement>("#bind-device")!;
@@ -530,34 +530,44 @@ async function copyText(value: string, label: string) {
     }
 }
 
-function positionCustomDomainHelp() {
-    const icon = customDomainHelp.getBoundingClientRect();
+function positionHint(hint: HTMLElement) {
+    const icon = hint.getBoundingClientRect();
+    const tooltip = hint.querySelector<HTMLElement>(".hint-tooltip")!;
     const width = Math.min(200, window.innerWidth - 24);
     const left = Math.max(12, Math.min(icon.left, window.innerWidth - width - 12));
-    customDomainHelpTooltip.style.left = `${left}px`;
-    customDomainHelpTooltip.style.top = "12px";
-    const height = customDomainHelpTooltip.getBoundingClientRect().height;
-    customDomainHelpTooltip.style.top = `${Math.max(12, icon.top - height - 8)}px`;
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = "12px";
+    const height = tooltip.getBoundingClientRect().height;
+    tooltip.style.top = `${Math.max(12, icon.top - height - 8)}px`;
 }
 
-function closeCustomDomainHelp() {
-    customDomainHelp.classList.remove("open");
-    customDomainHelp.setAttribute("aria-expanded", "false");
+function closeHint(hint: HTMLElement) {
+    hint.classList.remove("open");
+    hint.setAttribute("aria-expanded", "false");
+}
+
+function setListenHost(host: string) {
+    const lan = host === "0.0.0.0";
+    listenHostLocalButton.classList.toggle("active", !lan);
+    listenHostLocalButton.setAttribute("aria-pressed", `${!lan}`);
+    listenHostLANButton.classList.toggle("active", lan);
+    listenHostLANButton.setAttribute("aria-pressed", `${lan}`);
 }
 
 function renderListenAddr(address: string) {
     const separator = address.lastIndexOf(":");
     if (separator < 0) return;
-    listenHost.value = address.slice(0, separator);
+    setListenHost(address.slice(0, separator));
     listenPort.value = address.slice(separator + 1);
 }
 
 async function saveListenAddr() {
-    if (!listenHost.reportValidity() || !listenPort.reportValidity()) return;
+    if (!listenPort.reportValidity()) return;
     saveListenButton.disabled = true;
     showToast(t("restartingServer"));
     try {
-        const overview = await AppService.SetListenAddr(`${listenHost.value.trim()}:${listenPort.value}`);
+        const host = listenHostLANButton.classList.contains("active") ? "0.0.0.0" : "127.0.0.1";
+        const overview = await AppService.SetListenAddr(`${host}:${listenPort.value}`);
         controlAddr = overview.controlAddr || "";
         controlAddrs = overview.controlAddrs ?? [];
         serverUUID = overview.serverUuid;
@@ -655,27 +665,31 @@ tunnelURLInput.addEventListener("input", () => {
     tunnelConfigVersion++;
 });
 tunnelURLInput.addEventListener("blur", () => { window.setTimeout(() => void saveTunnelConfig(), 0); });
-customDomainHelp.addEventListener("click", () => {
-    const expanded = customDomainHelp.classList.toggle("open");
-    customDomainHelp.setAttribute("aria-expanded", `${expanded}`);
-    if (expanded) window.requestAnimationFrame(positionCustomDomainHelp);
+hints.forEach((hint) => {
+    hint.addEventListener("click", () => {
+        const expanded = hint.classList.toggle("open");
+        hint.setAttribute("aria-expanded", `${expanded}`);
+        if (expanded) window.requestAnimationFrame(() => positionHint(hint));
+    });
+    hint.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        hint.click();
+    });
+    hint.addEventListener("pointerenter", () => window.requestAnimationFrame(() => positionHint(hint)));
 });
-customDomainHelp.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    customDomainHelp.click();
-});
-customDomainHelp.addEventListener("pointerenter", () => window.requestAnimationFrame(positionCustomDomainHelp));
 document.addEventListener("pointermove", (event) => {
-    if (!customDomainHelp.classList.contains("open")) return;
-    const icon = customDomainHelp.getBoundingClientRect();
-    const tooltip = customDomainHelpTooltip.getBoundingClientRect();
-    const inIcon = event.clientX >= icon.left && event.clientX <= icon.right && event.clientY >= icon.top && event.clientY <= icon.bottom;
-    const inTooltip = event.clientX >= tooltip.left && event.clientX <= tooltip.right && event.clientY >= tooltip.top && event.clientY <= tooltip.bottom;
-    if (!inIcon && !inTooltip) closeCustomDomainHelp();
+    hints.forEach((hint) => {
+        if (!hint.classList.contains("open")) return;
+        const icon = hint.getBoundingClientRect();
+        const tooltip = hint.querySelector<HTMLElement>(".hint-tooltip")!.getBoundingClientRect();
+        const inIcon = event.clientX >= icon.left && event.clientX <= icon.right && event.clientY >= icon.top && event.clientY <= icon.bottom;
+        const inTooltip = event.clientX >= tooltip.left && event.clientX <= tooltip.right && event.clientY >= tooltip.top && event.clientY <= tooltip.bottom;
+        if (!inIcon && !inTooltip) closeHint(hint);
+    });
 });
 window.addEventListener("resize", () => {
-    if (customDomainHelp.classList.contains("open")) positionCustomDomainHelp();
+    hints.forEach((hint) => { if (hint.classList.contains("open")) positionHint(hint); });
 });
 bindDeviceButton.addEventListener("click", () => void bindDevice());
 copyPairingButton.addEventListener("click", () => void copyPairingCode());
@@ -693,6 +707,8 @@ copyMessageButton.addEventListener("click", () => void copyText(messageText.text
 copyAppServerButton.addEventListener("click", () => void copyText(controlAddr, "Local address"));
 copyTunnelButton.addEventListener("click", () => void copyText(tunnelURL, t("tunnelAddress")));
 saveListenButton.addEventListener("click", () => void saveListenAddr());
+listenHostLocalButton.addEventListener("click", () => setListenHost("127.0.0.1"));
+listenHostLANButton.addEventListener("click", () => setListenHost("0.0.0.0"));
 applyLanguage();
 void refresh();
 void refreshDevices();

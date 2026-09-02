@@ -45,7 +45,7 @@ h2 { margin-bottom: 8px; font-size: 19px; }
 .copy-field span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .copy-field[hidden] { display: none; }
 .listen-settings { display: grid; grid-template-columns: minmax(0, 1fr) 90px auto; align-items: end; gap: 10px; margin-top: 12px; }
-.listen-settings label { display: grid; gap: 6px; color: #8d97a6; font-size: 12px; }
+.listen-settings label, .listen-mode-field { display: grid; gap: 6px; color: #8d97a6; font-size: 12px; }
 .listen-settings input { width: 100%; min-height: 34px; border: 1px solid #3a414e; border-radius: 5px; outline: none; background: #101218; color: #e9edf2; padding: 7px 9px; }
 .listen-settings input:focus { border-color: #7d8796; }
 .tunnel-settings { display: grid; grid-template-columns: 220px minmax(0, 1fr); align-items: end; gap: 10px; margin-top: 12px; }
