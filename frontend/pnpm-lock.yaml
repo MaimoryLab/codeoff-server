@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@wailsio/runtime':
         specifier: latest
-        version: 3.0.0-beta.14
+        version: 3.0.0-beta.16
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -255,8 +255,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@wailsio/runtime@3.0.0-beta.14':
-    resolution: {integrity: sha512-PCXG3kA2uSVlqD63guZv3fQkUtPKBNCtZD/zDcdA3f2oXCDWLnmpINh4B0l2bItM7luL9ImB3p2B7cEsXMAOqw==}
+  '@wailsio/runtime@3.0.0-beta.16':
+    resolution: {integrity: sha512-IzaYrUKYDmvWDXf3Pqfl0onT1R5T5YHTx+AnK9vX4MyuE1PF3lXZmQrtvtfYNAsBnL+9e+iCJvIROGhjyf1rew==}
 
   ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
@@ -658,7 +658,7 @@ snapshots:
   '@typescript/typescript-win32-x64@7.0.2':
     optional: true
 
-  '@wailsio/runtime@3.0.0-beta.14': {}
+  '@wailsio/runtime@3.0.0-beta.16': {}
 
   ansi-regex@5.0.1: {}
 
