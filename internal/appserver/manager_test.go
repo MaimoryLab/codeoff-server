@@ -103,6 +103,31 @@ func TestManagerReleaseThread(t *testing.T) {
 	}
 }
 
+func TestManagerInterruptsActiveThreads(t *testing.T) {
+	interrupted := make(chan string, 2)
+	manager := newManager(func(context.Context, string, []string, ...string) (*Client, error) {
+		clientTransport, serverTransport := net.Pipe()
+		go serveInterrupt(serverTransport, interrupted)
+		return New(clientTransport), nil
+	})
+	t.Cleanup(func() { _ = manager.Stop() })
+	if _, err := manager.Start(context.Background(), "codex", nil); err != nil {
+		t.Fatal(err)
+	}
+
+	count, err := manager.InterruptActiveThreads(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Fatalf("interrupted = %d, want 2", count)
+	}
+	got := map[string]bool{<-interrupted: true, <-interrupted: true}
+	if !got["thread-42"] || !got["thread-43"] {
+		t.Fatalf("interrupted threads = %#v", got)
+	}
+}
+
 func TestManagerTakeOverThread(t *testing.T) {
 	var terminated atomic.Bool
 	manager := newManager(func(context.Context, string, []string, ...string) (*Client, error) {
@@ -178,6 +203,40 @@ func serveRelease(connection net.Conn, status string) {
 			result = map[string]any{"thread": map[string]any{"status": map[string]string{"type": status}}}
 		default:
 			result = map[string]any{}
+		}
+		if encoder.Encode(map[string]any{"id": request.ID, "result": result}) != nil {
+			return
+		}
+	}
+}
+
+func serveInterrupt(connection net.Conn, interrupted chan<- string) {
+	defer connection.Close()
+	scanner := bufio.NewScanner(connection)
+	encoder := json.NewEncoder(connection)
+	for scanner.Scan() {
+		var request message
+		if json.Unmarshal(scanner.Bytes(), &request) != nil || request.ID == nil {
+			continue
+		}
+		var result any
+		switch request.Method {
+		case "initialize":
+			result = map[string]any{"userAgent": "test", "codexHome": "/tmp/codex"}
+		case "thread/loaded/list":
+			result = map[string]any{"data": []string{"thread-42", "thread-43", "thread-idle"}}
+		case "thread/read":
+			var params map[string]string
+			_ = json.Unmarshal(request.Params, &params)
+			status := "active"
+			if params["threadId"] == "thread-idle" {
+				status = "idle"
+			}
+			result = map[string]any{"thread": map[string]any{"status": map[string]string{"type": status}}}
+		case "turn/interrupt":
+			var params map[string]string
+			_ = json.Unmarshal(request.Params, &params)
+			interrupted <- params["threadId"]
 		}
 		if encoder.Encode(map[string]any{"id": request.ID, "result": result}) != nil {
 			return

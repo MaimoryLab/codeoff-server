@@ -199,6 +199,31 @@ func (m *Manager) ReleaseThread(ctx context.Context, threadID string) (bool, err
 	return startErr == nil, errors.Join(stopErr, startErr)
 }
 
+func (m *Manager) InterruptActiveThreads(ctx context.Context) (int, error) {
+	m.operationMu.Lock()
+	defer m.operationMu.Unlock()
+	m.mu.RLock()
+	client := m.client
+	m.mu.RUnlock()
+	if client == nil {
+		return 0, errors.New("app-server is not running")
+	}
+	threadIDs, err := activeThreadIDs(ctx, client)
+	if err != nil {
+		return 0, err
+	}
+	var interruptErrs []error
+	interrupted := 0
+	for _, threadID := range threadIDs {
+		if err := client.Call(ctx, "turn/interrupt", map[string]string{"threadId": threadID}, nil); err != nil {
+			interruptErrs = append(interruptErrs, fmt.Errorf("interrupt thread %s: %w", threadID, err))
+			continue
+		}
+		interrupted++
+	}
+	return interrupted, errors.Join(interruptErrs...)
+}
+
 func (m *Manager) TakeOverThread(ctx context.Context, threadID string) (json.RawMessage, error) {
 	m.operationMu.Lock()
 	defer m.operationMu.Unlock()
@@ -261,7 +286,13 @@ func isWriterConflict(err error) bool {
 }
 
 func hasActiveThreads(ctx context.Context, client *Client) (bool, error) {
+	threadIDs, err := activeThreadIDs(ctx, client)
+	return len(threadIDs) > 0, err
+}
+
+func activeThreadIDs(ctx context.Context, client *Client) ([]string, error) {
 	var cursor string
+	var active []string
 	for {
 		var loaded struct {
 			Data       []string `json:"data"`
@@ -272,7 +303,7 @@ func hasActiveThreads(ctx context.Context, client *Client) (bool, error) {
 			params["cursor"] = cursor
 		}
 		if err := client.Call(ctx, "thread/loaded/list", params, &loaded); err != nil {
-			return false, err
+			return nil, err
 		}
 		for _, id := range loaded.Data {
 			var result struct {
@@ -283,14 +314,14 @@ func hasActiveThreads(ctx context.Context, client *Client) (bool, error) {
 				} `json:"thread"`
 			}
 			if err := client.Call(ctx, "thread/read", map[string]any{"threadId": id, "includeTurns": false}, &result); err != nil {
-				return false, err
+				return nil, err
 			}
 			if result.Thread.Status.Type == "active" {
-				return true, nil
+				active = append(active, id)
 			}
 		}
 		if loaded.NextCursor == "" || loaded.NextCursor == cursor {
-			return false, nil
+			return active, nil
 		}
 		cursor = loaded.NextCursor
 	}
