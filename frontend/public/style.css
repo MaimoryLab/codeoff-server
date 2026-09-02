@@ -5,7 +5,6 @@ button { font: inherit; }
 .shell { width: min(920px, calc(100% - 48px)); margin: 0 auto; padding: 20px 0 8px; }
 .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 32px; }
 .topbar { padding-bottom: 18px; }
-.topbar-leading { display: flex; align-items: flex-start; gap: 20px; min-width: 0; }
 .topbar-actions { display: flex; gap: 8px; }
 .thread-management { display: grid; flex: none; gap: 4px; }
 .active-thread-count { color: #8d97a6; font-size: 11px; white-space: nowrap; }
