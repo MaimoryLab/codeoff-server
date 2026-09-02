@@ -20,14 +20,20 @@ const translations: Record<Language, Record<string, string>> = {
     }
 };
 
-translations.en.confirmReleaseConversations = "Interrupt all active Codeoff conversations?";
-translations.en.interruptingConversations = "Interrupting active conversations...";
-translations.en.conversationsReleased = "Interrupted {count} active conversations";
-translations.en.unableReleaseConversations = "Unable to interrupt active conversations";
-translations.zh.confirmReleaseConversations = "确定要强制打断所有由 Codeoff 发起的进行中对话吗？";
-translations.zh.interruptingConversations = "正在打断进行中的对话...";
-translations.zh.conversationsReleased = "已打断 {count} 个进行中对话";
-translations.zh.unableReleaseConversations = "无法打断进行中的对话";
+translations.en.loadingReleaseThreads = "Loading conversations...";
+translations.en.noHeldThreads = "No conversations are held by Codeoff";
+translations.en.releaseThread = "Release";
+translations.en.confirmReleaseThread = "Release {name}?";
+translations.en.threadReleased = "Conversation released";
+translations.en.unableLoadHeldThreads = "Unable to load held conversations";
+translations.en.unableReleaseThread = "Unable to release conversation";
+translations.zh.loadingReleaseThreads = "正在加载对话...";
+translations.zh.noHeldThreads = "Codeoff 当前没有持有对话";
+translations.zh.releaseThread = "释放";
+translations.zh.confirmReleaseThread = "确定要释放“{name}”吗？";
+translations.zh.threadReleased = "对话已释放";
+translations.zh.unableLoadHeldThreads = "无法加载持有的对话";
+translations.zh.unableReleaseThread = "无法释放对话";
 
 const language: Language = navigator.language.toLowerCase().startsWith("zh") ? "zh" : "en";
 
@@ -102,6 +108,10 @@ const copyPairingTunnelButton = document.querySelector<HTMLButtonElement>("#copy
 const startPairingAppServerButton = document.querySelector<HTMLButtonElement>("#start-pairing-app-server")!;
 const startPairingTunnelButton = document.querySelector<HTMLButtonElement>("#start-pairing-tunnel")!;
 const closePairingButtons = document.querySelectorAll<HTMLButtonElement>("#close-pairing, #close-pairing-icon");
+const releaseDialog = document.querySelector<HTMLDialogElement>("#release-dialog")!;
+const releaseDialogStatus = document.querySelector<HTMLElement>("#release-dialog-status")!;
+const releaseThreadList = document.querySelector<HTMLElement>("#release-thread-list")!;
+const closeReleaseDialogButtons = document.querySelectorAll<HTMLButtonElement>("#close-release-dialog, #close-release-dialog-icon");
 const codexEnvironmentDialog = document.querySelector<HTMLDialogElement>("#codex-env-dialog")!;
 const codexEnvironmentInput = document.querySelector<HTMLTextAreaElement>("#codex-environment")!;
 const saveCodexEnvironmentButton = document.querySelector<HTMLButtonElement>("#save-codex-env")!;
@@ -127,7 +137,7 @@ let toastTimer = 0;
 let lastSnapshot: Snapshot | null = null;
 let lastAppServerState: RuntimeState | null = null;
 let lastTunnelState: TunnelState | null = null;
-let releaseConversationsInFlight = false;
+let releaseInFlight = false;
 
 type RuntimeState = {
     running: boolean;
@@ -141,6 +151,7 @@ type RuntimeState = {
 type TunnelState = { running: boolean; starting: boolean; stopping: boolean; external?: boolean; url?: string; error?: string };
 
 type Device = { id: string; name: string; createdAt: string; lastSeen: string; connected?: boolean };
+type HeldThread = { id: string; name: string; status: string };
 
 const tools: Record<string, HTMLElement> = {
     node: document.querySelector<HTMLElement>("#tool-node")!,
@@ -191,7 +202,7 @@ function renderAppServer(state: RuntimeState, address = controlAddr) {
     copyAppServerButton.disabled = !address;
     toggleAppServerButton.textContent = state.running || state.starting ? t("stop") : t("start");
     toggleAppServerButton.disabled = state.starting || state.stopping;
-    releaseConversationsButton.disabled = releaseConversationsInFlight || !state.running;
+    releaseConversationsButton.disabled = releaseInFlight;
     void updatePairingDialog();
 }
 
@@ -345,19 +356,69 @@ async function toggleAppServer() {
     }
 }
 
-async function releaseConversations() {
-    if (!window.confirm(t("confirmReleaseConversations"))) return;
-    releaseConversationsInFlight = true;
+function renderHeldThreads(threads: HeldThread[]) {
+    releaseThreadList.replaceChildren();
+    if (threads.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "muted";
+        empty.textContent = t("noHeldThreads");
+        releaseThreadList.append(empty);
+        return;
+    }
+    for (const thread of threads) {
+        const row = document.createElement("div");
+        row.className = "release-thread-row";
+        const info = document.createElement("div");
+        info.className = "release-thread-info";
+        const name = document.createElement("strong");
+        name.className = "release-thread-name";
+        name.textContent = thread.name || thread.id;
+        const status = document.createElement("span");
+        status.className = "release-thread-status";
+        status.textContent = thread.status || "-";
+        info.append(name, status);
+        const button = document.createElement("button");
+        button.className = "mini-button";
+        button.type = "button";
+        button.textContent = t("releaseThread");
+        button.addEventListener("click", () => void releaseThread(thread, button));
+        row.append(info, button);
+        releaseThreadList.append(row);
+    }
+}
+
+async function showReleaseDialog() {
+    releaseInFlight = true;
     releaseConversationsButton.disabled = true;
-    showToast(t("interruptingConversations"));
+    releaseDialogStatus.textContent = t("loadingReleaseThreads");
+    releaseThreadList.replaceChildren();
+    releaseDialog.showModal();
     try {
-        const count = await AppService.InterruptActiveThreads();
-        showToast(t("conversationsReleased", {count: `${count}`}));
+        renderHeldThreads((await AppService.HeldThreads()) ?? []);
+        releaseDialogStatus.textContent = "";
     } catch (error) {
-        showToast(error instanceof Error ? error.message : t("unableReleaseConversations"), true);
+        releaseDialogStatus.textContent = error instanceof Error ? error.message : t("unableLoadHeldThreads");
     } finally {
-        releaseConversationsInFlight = false;
-        releaseConversationsButton.disabled = !appServerRunning;
+        releaseInFlight = false;
+        releaseConversationsButton.disabled = false;
+    }
+}
+
+async function releaseThread(thread: HeldThread, button: HTMLButtonElement) {
+    const name = thread.name || thread.id;
+    if (!window.confirm(t("confirmReleaseThread", {name}))) return;
+    releaseInFlight = true;
+    button.disabled = true;
+    try {
+        await AppService.ReleaseThread(thread.id);
+        releaseDialog.close();
+        showToast(t("threadReleased"));
+    } catch (error) {
+        button.disabled = false;
+        showToast(error instanceof Error ? error.message : t("unableReleaseThread"), true);
+    } finally {
+        releaseInFlight = false;
+        releaseConversationsButton.disabled = false;
     }
 }
 
@@ -550,7 +611,7 @@ async function install(kind: "node" | "codex" | "cloudflared") {
 
 refreshButton.addEventListener("click", refresh);
 connectButton.addEventListener("click", () => void showConnectionDialog());
-releaseConversationsButton.addEventListener("click", () => void releaseConversations());
+releaseConversationsButton.addEventListener("click", () => void showReleaseDialog());
 installNodeButton.addEventListener("click", () => void install("node"));
 configureCodexButton.addEventListener("click", () => void showCodexEnvironment());
 installCodexButton.addEventListener("click", () => void install("codex"));
@@ -599,6 +660,7 @@ copyPairingTunnelButton.addEventListener("click", () => void copyText(tunnelURL,
 startPairingAppServerButton.addEventListener("click", () => void startPairingAppServer());
 startPairingTunnelButton.addEventListener("click", () => void startPairingTunnel());
 closePairingButtons.forEach((button) => button.addEventListener("click", () => pairingDialog.close()));
+closeReleaseDialogButtons.forEach((button) => button.addEventListener("click", () => releaseDialog.close()));
 closeCodexEnvironmentButtons.forEach((button) => button.addEventListener("click", () => codexEnvironmentDialog.close()));
 saveCodexEnvironmentButton.addEventListener("click", () => void saveCodexEnvironment());
 pairingDialog.addEventListener("close", () => { pairingDialogMode = ""; });

@@ -10,7 +10,7 @@
 <main class="shell">
     <header class="topbar">
         <div><p class="eyebrow" data-i18n="localControl">LOCAL CONTROL</p><h1>Codeoff Server</h1></div>
-        <div class="topbar-actions"><button id="connect" class="button" type="button" data-i18n="connect" disabled>Connect</button><button id="release-conversations" class="button secondary" type="button" data-i18n="releaseConversations" disabled>Release conversations</button><button id="refresh" class="button secondary" type="button" data-i18n="refresh">Refresh</button></div>
+        <div class="topbar-actions"><button id="connect" class="button" type="button" data-i18n="connect" disabled>Connect</button><button id="release-conversations" class="button secondary" type="button" data-i18n="releaseConversations">Release conversations</button><button id="refresh" class="button secondary" type="button" data-i18n="refresh">Refresh</button></div>
     </header>
     <div id="message" class="notice" role="status" aria-live="polite" aria-atomic="true" hidden><span id="message-text"></span><button id="copy-message" class="mini-button" type="button" hidden data-i18n="copy">Copy</button></div>
     <div id="dashboard" class="dashboard">
@@ -49,6 +49,11 @@
         <div class="pairing-field"><span data-i18n="tunnelAddress">Tunnel address</span><div><strong id="pairing-tunnel-value"></strong><button id="copy-pairing-tunnel" class="mini-button" type="button" data-i18n="copy">Copy</button><button id="start-pairing-tunnel" class="mini-button" type="button" data-i18n="start">Start</button></div></div>
     </div>
     <button id="close-pairing" class="button dialog-done" type="button" data-i18n="close">Close</button>
+</dialog>
+<dialog id="release-dialog" class="pairing-dialog release-dialog">
+    <div class="dialog-heading"><div><h2 data-i18n="releaseConversations">Release conversations</h2><p id="release-dialog-status" class="muted"></p></div><button id="close-release-dialog-icon" class="dialog-close" type="button" data-i18n-aria-label="close">&times;</button></div>
+    <div id="release-thread-list" class="release-thread-list"></div>
+    <button id="close-release-dialog" class="button dialog-done" type="button" data-i18n="close">Close</button>
 </dialog>
 <dialog id="codex-env-dialog" class="pairing-dialog codex-env-dialog">
     <div class="dialog-heading"><h2 data-i18n="codexEnvironment">Codex environment</h2><button id="close-codex-env-icon" class="dialog-close" type="button" data-i18n-aria-label="close">&times;</button></div>
