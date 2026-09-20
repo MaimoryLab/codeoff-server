@@ -63,6 +63,7 @@ type Client struct {
 	nextID    atomic.Int64
 	pendingMu sync.Mutex
 	pending   map[int64]chan response
+	approvals map[string]message
 	events    chan Event
 	done      chan struct{}
 	closeOnce sync.Once
@@ -103,6 +104,7 @@ func New(transport io.ReadWriteCloser) *Client {
 		transport: transport,
 		encoder:   json.NewEncoder(transport),
 		pending:   make(map[int64]chan response),
+		approvals: make(map[string]message),
 		events:    make(chan Event, 64),
 		done:      make(chan struct{}),
 	}
@@ -163,11 +165,27 @@ func (c *Client) Notify(method string, params any) error {
 }
 
 func (c *Client) Respond(id json.RawMessage, result any, rpcError *RPCError) error {
-	return c.send(struct {
+	c.pendingMu.Lock()
+	request, ok := c.approvals[requestKey(id)]
+	c.pendingMu.Unlock()
+	if ok && rpcError == nil {
+		var err error
+		result, err = approvalResult(request, result)
+		if err != nil {
+			return err
+		}
+	}
+	err := c.send(struct {
 		ID     json.RawMessage `json:"id"`
 		Result any             `json:"result,omitempty"`
 		Error  *RPCError       `json:"error,omitempty"`
 	}{id, result, rpcError})
+	if err == nil {
+		c.pendingMu.Lock()
+		delete(c.approvals, requestKey(id))
+		c.pendingMu.Unlock()
+	}
+	return err
 }
 
 func (c *Client) Events() <-chan Event { return c.events }
@@ -208,6 +226,7 @@ func (c *Client) readLoop() {
 			return
 		}
 		if incoming.Method != "" {
+			c.trackApproval(incoming)
 			select {
 			case c.events <- Event{ID: incoming.ID, Method: incoming.Method, Params: incoming.Params}:
 			case <-c.done:
