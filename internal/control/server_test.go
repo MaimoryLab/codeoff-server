@@ -23,7 +23,8 @@ import (
 )
 
 type fakeRemoteAppServer struct {
-	events chan appserver.Event
+	events     chan appserver.Event
+	responseID json.RawMessage
 }
 
 func TestCreateDirectoryValue(t *testing.T) {
@@ -57,14 +58,31 @@ func (s *fakeRemoteAppServer) ReleaseThread(context.Context, string) (bool, erro
 func (s *fakeRemoteAppServer) TakeOverThread(context.Context, string) (json.RawMessage, error) {
 	return json.RawMessage(`{}`), nil
 }
-func (s *fakeRemoteAppServer) Respond(int64, any, *appserver.RPCError) error { return nil }
-func (s *fakeRemoteAppServer) Events() <-chan appserver.Event                { return s.events }
+func (s *fakeRemoteAppServer) Respond(id json.RawMessage, _ any, _ *appserver.RPCError) error {
+	s.responseID = id
+	return nil
+}
+func (s *fakeRemoteAppServer) Events() <-chan appserver.Event { return s.events }
 
-func TestApprovalResponseAcceptsZeroRequestID(t *testing.T) {
-	session := websocketSession{appServer: new(fakeRemoteAppServer)}
-	_, status, err := session.approve(map[string]any{"requestId": float64(0), "decision": "accept"})
-	if err != nil || status != http.StatusNoContent {
-		t.Fatalf("approve zero request ID: status = %d, err = %v", status, err)
+func TestApprovalResponseRequestIDs(t *testing.T) {
+	for _, id := range []string{`0`, `9223372036854775807`, `"approval-1"`, `"0"`, `""`} {
+		t.Run(id, func(t *testing.T) {
+			remote := new(fakeRemoteAppServer)
+			session := websocketSession{appServer: remote}
+			_, status, err := session.dispatch(websocketRequest{Method: "approval/respond",
+				Params: json.RawMessage(`{"requestId":` + id + `,"decision":"accept"}`)})
+			if err != nil || status != http.StatusNoContent || string(remote.responseID) != id {
+				t.Fatalf("response ID = %s, status = %d, err = %v", remote.responseID, status, err)
+			}
+		})
+	}
+	for _, id := range []string{`null`, `true`, `{}`, `[]`, `1.5`, `9223372036854775808`} {
+		session := websocketSession{appServer: new(fakeRemoteAppServer)}
+		_, status, err := session.dispatch(websocketRequest{Method: "approval/respond",
+			Params: json.RawMessage(`{"requestId":` + id + `,"decision":"accept"}`)})
+		if err == nil || status != http.StatusBadRequest {
+			t.Fatalf("accepted invalid ID %s: status = %d, err = %v", id, status, err)
+		}
 	}
 }
 
@@ -316,8 +334,7 @@ func TestWebSocketPushesEventsWithIDs(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = conn.Close(websocket.StatusNormalClosure, "") })
-	id := int64(7)
-	fake.events <- appserver.Event{ID: &id, Method: "approval/requested", Params: json.RawMessage(`{"request":"ok"}`)}
+	fake.events <- appserver.Event{ID: json.RawMessage(`7`), Method: "approval/requested", Params: json.RawMessage(`{"request":"ok"}`)}
 	var event map[string]any
 	if err := wsjson.Read(context.Background(), conn, &event); err != nil {
 		t.Fatal(err)

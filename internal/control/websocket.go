@@ -120,7 +120,7 @@ func (s *websocketSession) writeEvents(events <-chan appserver.Event) {
 			}
 			value := map[string]any{"method": event.Method, "params": json.RawMessage(event.Params)}
 			if event.ID != nil {
-				value["id"] = *event.ID
+				value["id"] = event.ID
 			}
 			data, err := json.Marshal(value)
 			if err != nil || s.conn.Write(s.ctx, websocket.MessageText, data) != nil {
@@ -144,7 +144,9 @@ func (s *websocketSession) handle(request websocketRequest) {
 func (s *websocketSession) dispatch(request websocketRequest) (any, int, error) {
 	params := map[string]any{}
 	if len(request.Params) > 0 && string(request.Params) != "null" {
-		if err := json.Unmarshal(request.Params, &params); err != nil {
+		decoder := json.NewDecoder(strings.NewReader(string(request.Params)))
+		decoder.UseNumber()
+		if err := decoder.Decode(&params); err != nil {
 			return nil, http.StatusBadRequest, errors.New("invalid request params")
 		}
 	}
@@ -323,8 +325,11 @@ func (s *websocketSession) turn(params map[string]any, method string) (any, int,
 }
 
 func (s *websocketSession) approve(params map[string]any) (any, int, error) {
-	requestID, ok := params["requestId"].(float64)
-	if !ok || requestID != float64(int64(requestID)) {
+	requestID, err := json.Marshal(params["requestId"])
+	var number int64
+	var text string
+	if err != nil || string(requestID) == "null" ||
+		(json.Unmarshal(requestID, &number) != nil && json.Unmarshal(requestID, &text) != nil) {
 		return nil, http.StatusBadRequest, errors.New("invalid approval request id")
 	}
 	decision, ok := params["decision"]
@@ -338,7 +343,7 @@ func (s *websocketSession) approve(params map[string]any) (any, int, error) {
 	if s.appServer == nil {
 		return nil, http.StatusServiceUnavailable, errors.New("app-server is not running")
 	}
-	if err := s.appServer.Respond(int64(requestID), map[string]json.RawMessage{"decision": raw}, nil); err != nil {
+	if err := s.appServer.Respond(requestID, map[string]json.RawMessage{"decision": raw}, nil); err != nil {
 		return nil, appServerStatus(err), err
 	}
 	return nil, http.StatusNoContent, nil

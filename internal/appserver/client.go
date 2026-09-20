@@ -28,7 +28,7 @@ type InitializeResponse struct {
 }
 
 type Event struct {
-	ID     *int64
+	ID     json.RawMessage
 	Method string
 	Params json.RawMessage
 }
@@ -44,7 +44,7 @@ func (e *RPCError) Error() string {
 }
 
 type message struct {
-	ID     *int64          `json:"id,omitempty"`
+	ID     json.RawMessage `json:"id,omitempty"`
 	Method string          `json:"method,omitempty"`
 	Params json.RawMessage `json:"params,omitempty"`
 	Result json.RawMessage `json:"result,omitempty"`
@@ -162,11 +162,11 @@ func (c *Client) Notify(method string, params any) error {
 	}{method, params})
 }
 
-func (c *Client) Respond(id int64, result any, rpcError *RPCError) error {
+func (c *Client) Respond(id json.RawMessage, result any, rpcError *RPCError) error {
 	return c.send(struct {
-		ID     int64     `json:"id"`
-		Result any       `json:"result,omitempty"`
-		Error  *RPCError `json:"error,omitempty"`
+		ID     json.RawMessage `json:"id"`
+		Result any             `json:"result,omitempty"`
+		Error  *RPCError       `json:"error,omitempty"`
 	}{id, result, rpcError})
 }
 
@@ -216,11 +216,15 @@ func (c *Client) readLoop() {
 			continue
 		}
 		if incoming.ID != nil {
+			var id int64
+			if json.Unmarshal(incoming.ID, &id) != nil {
+				continue // Responses must echo the numeric IDs sent by Call.
+			}
 			var responseErr error
 			if incoming.Error != nil {
 				responseErr = incoming.Error
 			}
-			c.deliver(*incoming.ID, response{result: incoming.Result, err: responseErr})
+			c.deliver(id, response{result: incoming.Result, err: responseErr})
 		}
 	}
 	c.shutdown(scanner.Err())

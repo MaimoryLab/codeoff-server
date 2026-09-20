@@ -81,3 +81,32 @@ func TestCallReturnsRPCError(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestServerRequestIDRoundTrip(t *testing.T) {
+	for _, id := range []string{`0`, `9223372036854775807`, `"approval-1"`, `"0"`} {
+		t.Run(id, func(t *testing.T) {
+			clientTransport, serverTransport := net.Pipe()
+			client := New(clientTransport)
+			t.Cleanup(func() { _ = client.Close(); _ = serverTransport.Close() })
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second)
+			defer cancel()
+			go func() {
+				_ = json.NewEncoder(serverTransport).Encode(message{ID: json.RawMessage(id), Method: "item/fileChange/requestApproval"})
+			}()
+			select {
+			case event := <-client.Events():
+				if string(event.ID) != id {
+					t.Fatalf("event ID = %s, want %s", event.ID, id)
+				}
+				go func() { _ = client.Respond(event.ID, map[string]string{"decision": "accept"}, nil) }()
+			case <-ctx.Done():
+				t.Fatal(ctx.Err())
+			}
+			_ = serverTransport.SetReadDeadline(time.Now().Add(time.Second))
+			var reply message
+			if err := json.NewDecoder(serverTransport).Decode(&reply); err != nil || string(reply.ID) != id {
+				t.Fatalf("reply ID = %s, want %s: %v", reply.ID, id, err)
+			}
+		})
+	}
+}

@@ -367,7 +367,7 @@ func heldThreads(ctx context.Context, client *Client) ([]HeldThread, error) {
 	}
 }
 
-func (m *Manager) Respond(id int64, result any, rpcError *RPCError) error {
+func (m *Manager) Respond(id json.RawMessage, result any, rpcError *RPCError) error {
 	m.mu.RLock()
 	client := m.client
 	m.mu.RUnlock()

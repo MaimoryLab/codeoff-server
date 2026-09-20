@@ -51,7 +51,7 @@ type AppServer interface {
 	ResumeThread(context.Context, string) (json.RawMessage, error)
 	ReleaseThread(context.Context, string) (bool, error)
 	TakeOverThread(context.Context, string) (json.RawMessage, error)
-	Respond(int64, any, *appserver.RPCError) error
+	Respond(json.RawMessage, any, *appserver.RPCError) error
 	Events() <-chan appserver.Event
 }
 
