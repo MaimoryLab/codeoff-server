@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	minClientVersion    = "1.0.0"
+	minClientVersion    = "1.3.0"
 	serverVersionHeader = "X-Codeoff-Server-Version"
 	minClientHeader     = "X-Codeoff-Min-Client-Version"
 )

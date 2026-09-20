@@ -10,7 +10,7 @@
   <Identity 
     Name="ai.maimory.codeoff-server"
     Publisher="CN=MaimoryLab"
-    Version="1.2.5.0" 
+    Version="1.3.0.0" 
     ProcessorArchitecture="arm64" />
   
   <Properties>
