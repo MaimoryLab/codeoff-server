@@ -238,7 +238,7 @@ func (m *Manager) TakeOverThread(ctx context.Context, threadID string) (json.Raw
 
 	params := map[string]string{"threadId": threadID}
 	result, err := resumeOwnedThread(ctx, client, threadID)
-	if err == nil || !isWriterConflict(err) {
+	if err == nil || !IsWriterConflict(err) {
 		return result, err
 	}
 	takeoverCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -251,7 +251,7 @@ func (m *Manager) TakeOverThread(ctx context.Context, threadID string) (json.Raw
 	defer ticker.Stop()
 	for {
 		result, err = resumeThread(takeoverCtx, client, params)
-		if err == nil || !isWriterConflict(err) {
+		if err == nil || !IsWriterConflict(err) {
 			return result, err
 		}
 		select {
@@ -265,7 +265,7 @@ func (m *Manager) TakeOverThread(ctx context.Context, threadID string) (json.Raw
 func resumeOwnedThread(ctx context.Context, client *Client, threadID string) (json.RawMessage, error) {
 	params := map[string]string{"threadId": threadID}
 	result, err := resumeThread(ctx, client, params)
-	if err == nil || !isWriterConflict(err) {
+	if err == nil || !IsWriterConflict(err) {
 		return result, err
 	}
 	if unsubscribeErr := client.Call(ctx, "thread/unsubscribe", params, nil); unsubscribeErr != nil {
@@ -286,9 +286,10 @@ func resumeThread(ctx context.Context, client *Client, params map[string]string)
 	return result, nil
 }
 
-func isWriterConflict(err error) bool {
+// IsWriterConflict distinguishes writer ownership from other invalid requests.
+func IsWriterConflict(err error) bool {
 	rpcError, ok := errors.AsType[*RPCError](err)
-	return ok && rpcError.Code == -32600
+	return ok && rpcError.Code == -32600 && strings.Contains(strings.ToLower(rpcError.Message), "active writer")
 }
 
 func hasActiveThreads(ctx context.Context, client *Client) (bool, error) {

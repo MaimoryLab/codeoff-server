@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -82,6 +83,26 @@ func TestApprovalResponseRequestIDs(t *testing.T) {
 			Params: json.RawMessage(`{"requestId":` + id + `,"decision":"accept"}`)})
 		if err == nil || status != http.StatusBadRequest {
 			t.Fatalf("accepted invalid ID %s: status = %d, err = %v", id, status, err)
+		}
+	}
+}
+
+func TestAppServerErrorStatus(t *testing.T) {
+	for _, test := range []struct {
+		code    int
+		message string
+		status  int
+	}{
+		{-32600, "thread has an active writer", http.StatusConflict},
+		{-32600, "no rollout found for thread id", http.StatusBadRequest},
+		{-32602, "invalid params", http.StatusBadRequest},
+		{-32601, "list_turns is not supported yet", http.StatusNotImplemented},
+		{-32001, "server overloaded", http.StatusTooManyRequests},
+		{-32603, "internal error", http.StatusBadGateway},
+	} {
+		err := fmt.Errorf("read history: %w", &appserver.RPCError{Code: test.code, Message: test.message})
+		if status := appServerStatus(err); status != test.status {
+			t.Errorf("%s: status = %d, want %d", test.message, status, test.status)
 		}
 	}
 }

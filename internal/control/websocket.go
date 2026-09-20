@@ -188,10 +188,12 @@ func (s *websocketSession) dispatch(request websocketRequest) (any, int, error) 
 			return nil, status, err
 		}
 		return result, http.StatusOK, nil
-	case "thread/list":
-		return s.call("thread/list", params)
+	case "thread/list", "thread/turns/list", "thread/items/list":
+		return s.call(request.Method, params)
 	case "thread/read":
-		params["includeTurns"] = true
+		if _, ok := params["includeTurns"]; !ok {
+			params["includeTurns"] = true
+		}
 		return s.call("thread/read", params)
 	case "thread/start":
 		return s.call("thread/start", params)
@@ -375,11 +377,18 @@ func statusFor(err error, fallback int) int {
 }
 
 func appServerStatus(err error) int {
-	if rpcError, ok := errors.AsType[*appserver.RPCError](err); ok {
-		if rpcError.Code == -32001 {
-			return http.StatusTooManyRequests
-		}
+	if appserver.IsWriterConflict(err) {
 		return http.StatusConflict
+	}
+	if rpcError, ok := errors.AsType[*appserver.RPCError](err); ok {
+		switch rpcError.Code {
+		case -32001:
+			return http.StatusTooManyRequests
+		case -32601:
+			return http.StatusNotImplemented
+		case -32600, -32602:
+			return http.StatusBadRequest
+		}
 	}
 	return http.StatusBadGateway
 }
