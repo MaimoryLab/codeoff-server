@@ -166,6 +166,9 @@ func (m *Manager) Call(ctx context.Context, method string, params any) (json.Raw
 	if client == nil {
 		return nil, errors.New("app-server is not running")
 	}
+	if method == "thread/read" {
+		return readThread(ctx, client, params)
+	}
 	var result json.RawMessage
 	if err := client.Call(ctx, method, params, &result); err != nil {
 		return nil, err
@@ -271,9 +274,13 @@ func resumeOwnedThread(ctx context.Context, client *Client, threadID string) (js
 	return resumeThread(ctx, client, params)
 }
 
-func resumeThread(ctx context.Context, client *Client, params any) (json.RawMessage, error) {
+func resumeThread(ctx context.Context, client *Client, params map[string]string) (json.RawMessage, error) {
+	args := map[string]any{"excludeTurns": true}
+	for key, value := range params {
+		args[key] = value
+	}
 	var result json.RawMessage
-	if err := client.Call(ctx, "thread/resume", params, &result); err != nil {
+	if err := client.Call(ctx, "thread/resume", args, &result); err != nil {
 		return nil, err
 	}
 	return result, nil
