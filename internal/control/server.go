@@ -418,12 +418,12 @@ func (s *Server) saveUpload(name string, data io.Reader) (map[string]any, error)
 	return map[string]any{"path": path, "image": image}, nil
 }
 
-func (s *Server) userInput(request turnRequest) ([]map[string]string, error) {
+func (s *Server) userInput(request turnRequest) ([]map[string]any, error) {
 	text := strings.TrimSpace(request.Input)
 	if text == "" && len(request.Attachments) == 0 {
 		return nil, errors.New("input or attachments are required")
 	}
-	input := make([]map[string]string, 0, len(request.Attachments)+1)
+	input := make([]map[string]any, 0, len(request.Attachments)+1)
 	var files strings.Builder
 	for _, attachment := range request.Attachments {
 		s.uploadMu.RLock()
@@ -439,7 +439,7 @@ func (s *Server) userInput(request turnRequest) ([]map[string]string, error) {
 		name = strings.NewReplacer("\r", " ", "\n", " ").Replace(name)
 		fmt.Fprintf(&files, "\n## %s: %s\n", name, attachment.Path)
 		if image {
-			input = append(input, map[string]string{"type": "localImage", "path": attachment.Path})
+			input = append(input, map[string]any{"type": "localImage", "path": attachment.Path})
 		}
 	}
 	if files.Len() > 0 {
@@ -448,7 +448,7 @@ func (s *Server) userInput(request turnRequest) ([]map[string]string, error) {
 		}
 		text += "# Files mentioned by the user:\n" + files.String()
 	}
-	return append([]map[string]string{{"type": "text", "text": text}}, input...), nil
+	return append([]map[string]any{{"type": "text", "text": text, "text_elements": []any{}}}, input...), nil
 }
 
 func validApprovalDecision(raw json.RawMessage) bool {

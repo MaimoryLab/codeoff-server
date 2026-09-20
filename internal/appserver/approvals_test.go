@@ -6,6 +6,12 @@ import (
 )
 
 func TestApprovalResult(t *testing.T) {
+	amendment := json.RawMessage(`{"decision":{"approved_execpolicy_amendment":{"proposed_execpolicy_amendment":["git","status"]}}}`)
+	result, err := approvalResult(message{Method: "execCommandApproval"}, amendment)
+	data, _ := json.Marshal(result)
+	if err != nil || string(data) != string(amendment) {
+		t.Fatalf("changed legacy amendment: %s: %v", data, err)
+	}
 	for _, test := range []struct{ method, decision, want string }{
 		{"item/permissions/requestApproval", "accept", `{"permissions":{"network":{"enabled":true}},"scope":"turn"}`},
 		{"item/permissions/requestApproval", "acceptForSession", `{"permissions":{"network":{"enabled":true}},"scope":"session"}`},

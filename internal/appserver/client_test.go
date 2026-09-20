@@ -110,3 +110,24 @@ func TestServerRequestIDRoundTrip(t *testing.T) {
 		})
 	}
 }
+
+func TestCurrentTimeRequest(t *testing.T) {
+	left, right := net.Pipe()
+	client := New(left)
+	t.Cleanup(func() { _ = client.Close(); _ = right.Close() })
+	_ = right.SetDeadline(time.Now().Add(time.Second))
+	before := time.Now().Unix()
+	if err := json.NewEncoder(right).Encode(message{ID: json.RawMessage(`"clock"`), Method: "currentTime/read"}); err != nil {
+		t.Fatal(err)
+	}
+	var reply struct {
+		ID     string
+		Result struct{ CurrentTimeAt int64 }
+	}
+	if err := json.NewDecoder(right).Decode(&reply); err != nil {
+		t.Fatal(err)
+	}
+	if reply.ID != "clock" || reply.Result.CurrentTimeAt < before || reply.Result.CurrentTimeAt > time.Now().Unix() {
+		t.Fatalf("unexpected current time response: %+v", reply)
+	}
+}

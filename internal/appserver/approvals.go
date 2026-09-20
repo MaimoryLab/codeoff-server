@@ -38,13 +38,15 @@ func approvalResult(request message, result any) (any, error) {
 		return nil, err
 	}
 	var response struct {
-		Decision string `json:"decision"`
+		Decision json.RawMessage `json:"decision"`
 	}
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, err
 	}
+	var decision string
+	_ = json.Unmarshal(response.Decision, &decision)
 	if request.Method != "item/permissions/requestApproval" {
-		switch response.Decision {
+		switch decision {
 		case "accept":
 			return map[string]any{"decision": "approved"}, nil
 		case "acceptForSession":
@@ -59,7 +61,7 @@ func approvalResult(request message, result any) (any, error) {
 	}
 	permissions := map[string]json.RawMessage{}
 	scope := "turn"
-	switch response.Decision {
+	switch decision {
 	case "accept", "acceptForSession":
 		var params struct {
 			Permissions map[string]json.RawMessage `json:"permissions"`
@@ -72,7 +74,7 @@ func approvalResult(request message, result any) (any, error) {
 				permissions[key] = value
 			}
 		}
-		if response.Decision == "acceptForSession" {
+		if decision == "acceptForSession" {
 			scope = "session"
 		}
 	case "decline", "cancel":

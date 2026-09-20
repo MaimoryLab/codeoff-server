@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 const maxMessageSize = 16 << 20
@@ -226,6 +227,13 @@ func (c *Client) readLoop() {
 			return
 		}
 		if incoming.Method != "" {
+			if incoming.ID != nil && incoming.Method == "currentTime/read" {
+				if err := c.Respond(incoming.ID, map[string]int64{"currentTimeAt": time.Now().Unix()}, nil); err != nil {
+					c.shutdown(err)
+					return
+				}
+				continue
+			}
 			c.trackApproval(incoming)
 			select {
 			case c.events <- Event{ID: incoming.ID, Method: incoming.Method, Params: incoming.Params}:
