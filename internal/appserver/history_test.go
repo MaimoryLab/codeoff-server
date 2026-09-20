@@ -10,7 +10,7 @@ import (
 )
 
 func TestReadThreadHistory(t *testing.T) {
-	for _, mode := range []string{"legacy", "paginated", "unsupported", "repeated"} {
+	for _, mode := range []string{"legacy", "paginated", "empty", "unsupported", "repeated"} {
 		t.Run(mode, func(t *testing.T) {
 			left, right := net.Pipe()
 			client := New(left)
@@ -39,7 +39,9 @@ func TestReadThreadHistory(t *testing.T) {
 						if params["itemsView"] != "full" || params["sortDirection"] != "asc" {
 							t.Errorf("pagination params = %s", request.Params)
 						}
-						if mode == "unsupported" {
+						if mode == "empty" {
+							reply.Error = &RPCError{Code: -32600, Message: "thread t is not materialized yet"}
+						} else if mode == "unsupported" {
 							reply.Error = &RPCError{Code: -32601, Message: "list_turns is not supported yet"}
 						} else if params["cursor"] == nil || mode == "repeated" {
 							reply.Result = json.RawMessage(`{"data":[{"id":"old","itemsView":"full","items":[{"id":"message","type":"agentMessage","text":"hello"}]}],"nextCursor":"next"}`)
@@ -76,6 +78,12 @@ func TestReadThreadHistory(t *testing.T) {
 			}
 			if err := json.Unmarshal(data, &result); err != nil {
 				t.Fatal(err)
+			}
+			if mode == "empty" {
+				if len(result.Thread.Turns) != 0 {
+					t.Fatalf("empty history = %s", data)
+				}
+				return
 			}
 			if result.Thread.Turns[0].ID != "old" {
 				t.Fatalf("history = %s", data)

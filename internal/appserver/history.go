@@ -3,7 +3,9 @@ package appserver
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"strings"
 )
 
 // Keep the mobile thread/read response intact while hydrating paginated history.
@@ -34,8 +36,12 @@ func readThread(ctx context.Context, client *Client, params any) (json.RawMessag
 	}
 	if string(thread["historyMode"]) != `"paginated"` {
 		err := client.Call(ctx, "thread/read", params, &result)
+		if isUnmaterializedThread(err) {
+			return json.Marshal(response)
+		}
 		return result, err
 	}
+	// ponytail: mobile expects all turns; add UI pagination if responses grow too large.
 	turns := []json.RawMessage{}
 	args := map[string]any{"threadId": request.ThreadID, "sortDirection": "asc", "itemsView": "full", "limit": 100}
 	seen := map[string]bool{}
@@ -45,6 +51,9 @@ func readThread(ctx context.Context, client *Client, params any) (json.RawMessag
 			NextCursor string            `json:"nextCursor"`
 		}
 		if err := client.Call(ctx, "thread/turns/list", args, &page); err != nil {
+			if len(turns) == 0 && isUnmaterializedThread(err) {
+				return json.Marshal(response)
+			}
 			return nil, fmt.Errorf("read paginated thread history: %w", err)
 		}
 		turns = append(turns, page.Data...)
@@ -66,4 +75,9 @@ func readThread(ctx context.Context, client *Client, params any) (json.RawMessag
 		return nil, err
 	}
 	return json.Marshal(response)
+}
+
+func isUnmaterializedThread(err error) bool {
+	rpcError, ok := errors.AsType[*RPCError](err)
+	return ok && rpcError.Code == -32600 && strings.Contains(rpcError.Message, "not materialized yet")
 }
